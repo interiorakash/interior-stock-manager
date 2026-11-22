@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>INTERIORHUBS | Stock & Inventory Pro</title>
+  <title>Interior Stock Manager</title>
   <meta name="theme-color" content="#0f172a">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,25 +23,25 @@
       --tr: #0284c7;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
-    body { background: var(--bg); color: var(--text); padding-bottom: 70px; user-select: none; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 75px; }
     
     /* Header */
-    header { background: var(--primary); color: #fff; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-    .brand h1 { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; }
-    .brand span { font-size: 11px; color: #94a3b8; display: block; }
+    header { background: var(--primary); color: #fff; padding: 15px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .brand h1 { font-size: 17px; font-weight: 700; letter-spacing: 0.3px; }
     .header-actions { display: flex; gap: 8px; align-items: center; }
     .sync-dot { width: 9px; height: 9px; border-radius: 50%; background: #22c55e; display: inline-block; }
     .sync-dot.offline { background: #ef4444; }
-    .btn-icon { background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 7px 11px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn-icon { background: rgba(255,255,255,0.14); border: none; color: #fff; padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn-icon:active { background: rgba(255,255,255,0.25); }
 
     /* Container */
     .container { max-width: 600px; margin: 0 auto; padding: 14px; }
 
     /* 5 Action Badges Grid */
     .action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
-    .badge-btn { border: none; border-radius: 12px; padding: 16px 12px; color: #fff; font-weight: 700; font-size: 14px; text-align: left; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; min-height: 76px; box-shadow: 0 3px 6px rgba(0,0,0,0.08); transition: transform 0.1s; position: relative; overflow: hidden; }
-    .badge-btn:active { transform: scale(0.97); }
-    .badge-btn small { font-size: 11px; font-weight: 400; opacity: 0.9; margin-top: 4px; }
+    .badge-btn { border: none; border-radius: 12px; padding: 16px 12px; color: #fff; font-weight: 700; font-size: 14px; text-align: left; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; min-height: 76px; box-shadow: 0 3px 6px rgba(0,0,0,0.08); transition: transform 0.08s; }
+    .badge-btn:active { transform: scale(0.96); }
+    .badge-btn small { font-size: 11px; font-weight: 400; opacity: 0.92; margin-top: 4px; }
     .b-in { background: linear-gradient(135deg, #16a34a, #15803d); }
     .b-out { background: linear-gradient(135deg, #dc2626, #b91c1c); }
     .b-ret { background: linear-gradient(135deg, #d97706, #b45309); }
@@ -53,22 +53,23 @@
     .card-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; color: var(--primary); }
     .form-group { margin-bottom: 12px; position: relative; }
     label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
-    input, select, textarea { width: 100%; padding: 11px 12px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 14px; background: #fff; color: var(--text); outline: none; }
+    input, select { width: 100%; padding: 11px 12px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 14px; background: #fff; color: var(--text); outline: none; }
     input:focus, select:focus { border-color: var(--accent); }
     
     /* Search Dropdown */
-    .search-results { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1.5px solid var(--accent); border-radius: 10px; max-height: 220px; overflow-y: auto; z-index: 50; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: none; }
+    .search-results { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1.5px solid var(--accent); border-radius: 10px; max-height: 210px; overflow-y: auto; z-index: 50; box-shadow: 0 10px 25px rgba(0,0,0,0.18); display: none; }
     .search-item { padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
     .search-item:active { background: #eff6ff; }
     .search-item .cat { font-size: 10px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #334155; }
 
     /* Buttons */
-    .btn { width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; text-align: center; }
+    .btn { width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; }
+    .btn:active { opacity: 0.9; }
     .btn-primary { background: var(--accent); color: #fff; }
     .btn-success { background: var(--in); color: #fff; }
-    .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+    .btn-outline { background: #fff; border: 1.5px solid var(--border); color: var(--text); }
 
-    /* Stock Tabs */
+    /* Tabs */
     .tabs { display: flex; gap: 6px; margin-bottom: 12px; background: #e2e8f0; padding: 4px; border-radius: 10px; }
     .tab { flex: 1; padding: 8px; text-align: center; font-size: 12px; font-weight: 700; border-radius: 8px; cursor: pointer; color: var(--muted); }
     .tab.active { background: #fff; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
@@ -77,37 +78,37 @@
     .stock-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
     .stock-row:last-child { border-bottom: none; }
     .stock-name { font-size: 13px; font-weight: 600; }
-    .stock-meta { font-size: 11px; color: var(--muted); }
-    .stock-qty { font-size: 14px; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: #f1f5f9; }
+    .stock-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .stock-qty { font-size: 13px; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: #f1f5f9; white-space: nowrap; }
     .qty-low { background: #fee2e2; color: #dc2626; }
     .qty-used { background: #f3e8ff; color: #7c3aed; }
 
     /* Modals & Overlays */
-    .overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.75); z-index: 200; display: none; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px); }
-    .modal { background: #fff; width: 100%; max-width: 440px; border-radius: 16px; padding: 20px; max-height: 90vh; overflow-y: auto; }
+    .overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.75); z-index: 200; display: none; align-items: center; justify-content: center; padding: 16px; }
+    .modal { background: #fff; width: 100%; max-width: 440px; border-radius: 16px; padding: 20px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 35px rgba(0,0,0,0.25); }
     .preview-box { background: #f8fafc; border: 1.5px dashed #94a3b8; border-radius: 10px; padding: 12px; margin: 12px 0; font-size: 13px; line-height: 1.7; }
     .preview-box b { color: var(--primary); }
 
     /* Toast */
-    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 11px 20px; border-radius: 30px; font-size: 13px; font-weight: 600; z-index: 300; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.25); white-space: nowrap; }
+    .toast { position: fixed; bottom: 75px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 18px; border-radius: 30px; font-size: 13px; font-weight: 600; z-index: 350; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3); white-space: nowrap; }
 
     /* Bottom Nav */
     .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--border); display: flex; z-index: 90; }
-    .nav-item { flex: 1; padding: 10px 4px; text-align: center; font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer; }
-    .nav-item.active { color: var(--accent); }
+    .nav-item { flex: 1; padding: 12px 4px; text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; }
+    .nav-item.active { color: var(--accent); background: #f8fafc; }
     .hidden { display: none !important; }
+    .section-divider { border-top: 1px solid var(--border); margin: 14px 0; padding-top: 12px; }
   </style>
 </head>
 <body>
 
-  <!-- HEADER -->
+  <!-- HEADER: Strictly "Interior Stock Manager" by default, updates to Company Display Name after Admin Login -->
   <header>
     <div class="brand">
-      <h1>INTERIORHUBS</h1>
-      <span id="headerStaffInfo">Loading User...</span>
+      <h1 id="appHeaderTitle">Interior Stock Manager</h1>
     </div>
     <div class="header-actions">
-      <span class="sync-dot" id="syncStatus" title="Database Connected"></span>
+      <span class="sync-dot" id="syncStatus" title="Online"></span>
       <button class="btn-icon" onclick="openAdminModal()">Admin</button>
     </div>
   </header>
@@ -143,11 +144,11 @@
         </button>
       </div>
 
-      <!-- Recent Activity Quick Feed -->
+      <!-- Recent Activity Feed -->
       <div class="card">
         <div class="card-title">
           <span>Recent Entries (Live)</span>
-          <span style="font-size:11px; color:var(--accent);" id="staffQuotaBadge">Users: --/12</span>
+          <span style="font-size:11px; color:var(--accent);" id="staffQuotaBadge">Users: 1/12</span>
         </div>
         <div id="recentLogsList">
           <div style="text-align:center; color:var(--muted); font-size:13px; padding:15px;">No transactions recorded yet today.</div>
@@ -183,8 +184,8 @@
         <button class="btn-outline" style="width:auto; padding:4px 10px; font-size:12px;" onclick="closeModals()">✕</button>
       </div>
 
-      <div class="form-group" id="subTypeGroup">
-        <label id="subTypeLabel">Destination / Type</label>
+      <div class="form-group">
+        <label>Destination / Type</label>
         <select id="entrySubType" onchange="toggleSiteField()"></select>
       </div>
 
@@ -242,7 +243,7 @@
       </div>
 
       <div class="form-group">
-        <label id="trQtyLabel">Quantity / Weight</label>
+        <label>Quantity / Weight</label>
         <div style="display:flex; gap:8px;">
           <input type="number" step="0.001" id="trQty" placeholder="0.00">
           <input type="text" id="trUnit" readonly style="width:95px; background:#f1f5f9; font-weight:700; text-align:center;" value="UNIT">
@@ -259,40 +260,69 @@
   </div>
 
   <!-- MODAL 3: PREVIEW & CONFIRM OK -->
-  <div class="overlay" id="previewModal">
+  <div class="overlay" id="previewModal" style="z-index:220;">
     <div class="modal">
       <div class="card-title"><span>Confirm Entry Details</span></div>
       <p style="font-size:12px; color:var(--muted);">Please verify carefully before pressing OK:</p>
       <div class="preview-box" id="previewContent"></div>
       <div style="display:flex; gap:10px;">
         <button class="btn btn-outline" onclick="document.getElementById('previewModal').style.display='none'">EDIT</button>
-        <button class="btn btn-success" id="finalConfirmBtn" onclick="submitConfirmedEntry()">✓ CONFIRM & OK</button>
+        <button class="btn btn-success" onclick="submitConfirmedEntry()">✓ CONFIRM & OK</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL 4: STAFF REGISTRATION & LICENSE LOCK -->
-  <div class="overlay" id="registerModal" style="z-index:250;">
+  <!-- MODAL 4: FIRST-TIME COMPANY ADMIN / STAFF LOGIN SETUP -->
+  <div class="overlay" id="loginSetupModal" style="z-index:260;">
     <div class="modal">
-      <div class="card-title"><span>🔐 Staff & Device Registration</span></div>
-      <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Max 12 staff devices allowed per company license.</p>
-      
-      <div class="form-group" id="licenseInputGroup">
-        <label>Company License Key</label>
-        <input type="text" id="regLicenseKey" placeholder="Enter License Key (e.g. INT-HUB-2026)">
+      <div class="card-title"><span>🔐 Company & User Setup</span></div>
+      <div class="tabs">
+        <div class="tab active" id="tabRoleAdmin" onclick="switchLoginRole('ADMIN')">COMPANY ADMIN</div>
+        <div class="tab" id="tabRoleStaff" onclick="switchLoginRole('STAFF')">STAFF (MAX 12)</div>
       </div>
 
-      <div class="form-group">
-        <label>Your Full Name</label>
-        <input type="text" id="regStaffName" placeholder="Enter your name">
+      <!-- ADMIN LOGIN & PROFILE SETUP -->
+      <div id="adminSetupForm">
+        <div class="form-group">
+          <label>License Key</label>
+          <input type="text" id="setupLicenseKey" placeholder="Enter License Key (INT-HUB-2026)">
+        </div>
+        <div class="form-group">
+          <label>Company Admin Email ID *</label>
+          <input type="email" id="setupAdminEmail" placeholder="e.g. owner@company.com">
+        </div>
+        <div class="form-group">
+          <label>Admin Full Name *</label>
+          <input type="text" id="setupAdminName" placeholder="e.g. Akash Kumar">
+        </div>
+        <div class="form-group">
+          <label>Header Display Name (Shown on Top Bar) *</label>
+          <input type="text" id="setupCompanyDisplayName" placeholder="e.g. Interior Stock Manager or Firm Name">
+        </div>
+        <div class="form-group">
+          <label>Set Admin Password *</label>
+          <input type="password" id="setupAdminPass" placeholder="Create password (e.g. admin123)">
+        </div>
+        <button class="btn btn-primary" onclick="saveCompanyAdminLogin()">LOGIN & SAVE PROFILE</button>
       </div>
 
-      <button class="btn btn-primary" onclick="registerDeviceUser()">ACTIVATE & REGISTER</button>
+      <!-- STAFF LOGIN -->
+      <div id="staffSetupForm" class="hidden">
+        <div class="form-group">
+          <label>Company Admin Email ID *</label>
+          <input type="email" id="staffCompanyEmail" placeholder="Enter Company Admin Email ID">
+        </div>
+        <div class="form-group">
+          <label>Your Staff Name *</label>
+          <input type="text" id="staffFullName" placeholder="Enter your name">
+        </div>
+        <button class="btn btn-primary" onclick="registerStaffDevice()">ACTIVATE STAFF DEVICE</button>
+      </div>
     </div>
   </div>
 
-  <!-- MODAL 5: ADMIN PANEL -->
-  <div class="overlay" id="adminModal">
+  <!-- MODAL 5: ADMIN PANEL (WITH EDIT PROFILE FEATURE) -->
+  <div class="overlay" id="adminModal" style="z-index:240;">
     <div class="modal">
       <div class="card-title">
         <span>🛡️ Admin Control Panel</span>
@@ -302,13 +332,31 @@
       <div id="adminLoginBox">
         <div class="form-group">
           <label>Enter Admin Password</label>
-          <input type="password" id="adminPassInput" placeholder="Default: admin123">
+          <input type="password" id="adminPassInput" placeholder="Enter Admin Password">
         </div>
         <button class="btn btn-primary" onclick="verifyAdmin()">UNLOCK ADMIN</button>
       </div>
 
       <div id="adminDashboardBox" class="hidden">
-        <!-- Add Site -->
+        <!-- EDIT COMPANY & ADMIN DETAILS -->
+        <div style="background:#f8fafc; padding:12px; border-radius:10px; border:1px solid var(--border); margin-bottom:14px;">
+          <div style="font-size:13px; font-weight:700; color:var(--primary); margin-bottom:8px;">✏️ Edit Company & Admin Profile</div>
+          <div class="form-group">
+            <label>Top Header Display Name</label>
+            <input type="text" id="editHeaderName" placeholder="Header Display Name">
+          </div>
+          <div class="form-group">
+            <label>Admin Name</label>
+            <input type="text" id="editAdminName" placeholder="Admin Name">
+          </div>
+          <div class="form-group">
+            <label>Admin Email ID</label>
+            <input type="email" id="editAdminEmail" placeholder="Admin Email ID">
+          </div>
+          <button class="btn btn-primary" style="padding:10px;" onclick="updateCompanyProfile()">UPDATE & SAVE PROFILE</button>
+        </div>
+
+        <!-- ADD SITE -->
         <div class="form-group">
           <label>Add New Project Site</label>
           <div style="display:flex; gap:6px;">
@@ -317,24 +365,24 @@
           </div>
         </div>
 
-        <!-- Active Sites List -->
+        <!-- ACTIVE SITES -->
         <div class="form-group">
           <label>Active Sites</label>
-          <div id="adminSitesList" style="max-height:110px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:8px; font-size:12px;"></div>
+          <div id="adminSitesList" style="max-height:100px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:8px; font-size:12px;"></div>
         </div>
 
-        <!-- Staff Management (12 Limit) -->
+        <!-- STAFF MANAGEMENT -->
         <div class="form-group">
           <label>Registered Staff Devices (Max 12)</label>
-          <div id="adminStaffList" style="max-height:140px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:8px; font-size:12px;"></div>
+          <div id="adminStaffList" style="max-height:120px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:8px; font-size:12px;"></div>
         </div>
 
-        <!-- Change Password & License -->
-        <div class="form-group">
+        <!-- CHANGE PASSWORD -->
+        <div class="section-divider">
           <label>Change Admin Password</label>
           <div style="display:flex; gap:6px;">
             <input type="text" id="newAdminPass" placeholder="New Password">
-            <button class="btn btn-primary" style="width:90px;" onclick="updateAdminPass()">SAVE</button>
+            <button class="btn btn-outline" style="width:90px;" onclick="updateAdminPass()">SAVE</button>
           </div>
         </div>
       </div>
@@ -343,56 +391,16 @@
 
   <div class="toast" id="toastMsg">Saved!</div>
 
-  <!-- FIREBASE & APP LOGIC -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, limit, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    // YOUR CONNECTED CREDENTIALS
-    const firebaseConfig = {
-      apiKey: "AIzaSyBW8ZkJEjAjHh8CDJ3yJvcRYwQRhHBkkH4",
-      authDomain: "interior-stock-app-c7a1f.firebaseapp.com",
-      projectId: "interior-stock-app-c7a1f",
-      storageBucket: "interior-stock-app-c7a1f.firebasestorage.app",
-      messagingSenderId: "353218241112",
-      appId: "1:353218241112:web:5c8ae04253ea372d41e02d"
-    };
-
+  <!-- SYNCHRONOUS UI SCRIPT (GUARANTEES BUTTONS WORK IMMEDIATELY) -->
+  <script>
+    const MASTER_LICENSE_KEY = "INT-HUB-2026";
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHdDAgCpqAoK_z4GPm_yV3BPzeSFdrvLgn9MOMJC8W0nkmXIVdbl5-qMscltepl3yW5A/exec";
 
-    // Initialize Firebase with Offline Persistence for Zero-Lag
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    enableIndexedDbPersistence(db).catch(() => {});
-
-    // 143 STANDARD INTERIOR & MODULAR FACTORY ITEMS (Electric Wires strictly KG)
+    // 143 STANDARD ITEMS
     const MASTER_ITEMS = [
-      // PLYWOOD & BOARDS (1-18)
       { name: "BWP Marine Ply 19mm (8x4)", cat: "Plywood", unit: "Sheet" },
       { name: "BWP Marine Ply 16mm (8x4)", cat: "Plywood", unit: "Sheet" },
       { name: "BWP Marine Ply 12mm (8x4)", cat: "Plywood", unit: "Sheet" },
       { name: "BWP Marine Ply 9mm (8x4)", cat: "Plywood", unit: "Sheet" },
       { name: "BWP Marine Ply 6mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "MR Commercial Ply 19mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "MR Commercial Ply 12mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "MR Commercial Ply 6mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "BWP Block Board 19mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "BWP Block Board 25mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "HDHMR Board 18mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "HDHMR Board 12mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "HDHMR Board 8mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "MDF Board 18mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "MDF Board 12mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "MDF Board 6mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "WPC Board 18mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "WPC Board 12mm (8x4)", cat: "Boards", unit: "Sheet" },
-
-      // LAMINATES, VENEER & EDGE BANDING (19-34)
-      { name: "Outer Laminate 1mm (8x4)", cat: "Laminate", unit: "Sheet" },
-      { name: "Outer Laminate 0.8mm (8x4)", cat: "Laminate", unit: "Sheet" },
-      { name: "Inner White Liner Laminate 0.72mm", cat: "Laminate", unit: "Sheet" },
-      { name: "Acrylic Laminate Sheet 1.5mm", cat: "Laminate", unit: "Sheet" },
-      { name: "PVC Laminate Sheet 1.25mm", cat: "Laminate", unit: "Sheet" },
-      { name: "Natural Teak Veneer Sheet (8x4)", cat: "Veneer", unit: "Sheet" },
-      { name: "Charcoal Louver Panel (8ft)", cat: "Wall Panel", unit: "Pc" },
-      { name: "WPC Fluted Panel
+      { name: "MR Commercial Ply 19mm (8x4)", cat: "Plywood", un
