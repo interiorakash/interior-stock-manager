@@ -15,9 +15,10 @@
     .card h2 { font-size: 15px; margin-bottom: 12px; color: #1e293b; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
     input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: #fff; }
     .btn { width: 100%; padding: 13px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-primary { background: #0284c7; color: #fff; }
     .btn-success { background: #16a34a; color: #fff; }
-    .btn-outline { background: #f8fafc; color: #0f172a; border: 1px solid #cbd5e1; }
+    .btn-outline { background: #f8fafc; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-weight: 600; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
     .stat-box { background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; }
     .stat-box h3 { font-size: 20px; color: #0284c7; }
@@ -73,7 +74,7 @@
       <h2 id="lockTitle" style="margin-bottom:8px; color:#dc2626;">⏳ Approval Pending</h2>
       <p id="lockDesc" class="muted" style="margin-bottom:14px;">Your registration request has been sent to the Master Owner. Please wait for approval.</p>
       <button type="button" class="btn btn-primary" style="margin-bottom:10px;" onclick="checkStatusNow()">🔄 Check Approval Status</button>
-      
+
       <div id="renewalSection" style="display:none; border-top:1px solid #e2e8f0; padding-top:12px;">
         <p style="font-size:13px; font-weight:600; margin-bottom:6px;">Instant Renewal (Zero Data Loss)</p>
         <p class="muted" style="margin-bottom:8px;">Pay via UPI to: <b id="displayUpi">Contact Owner</b></p>
@@ -88,7 +89,7 @@
         </div>
         <button type="button" class="btn btn-success" onclick="submitRenewalUtr()">Verify UTR & Unlock Instantly</button>
       </div>
-      <button type="button" class="btn btn-outline" style="margin-top:10px;" onclick="logoutUser()">Switch Account</button>
+      <button type="button" class="btn btn-outline" style="margin-top:10px; padding:13px; width:100%;" onclick="logoutUser()">Switch Account</button>
     </div>
   </div>
 
@@ -124,7 +125,7 @@
           <option value="RETURN">RETURN (Site to Godown)</option>
         </select>
         <input type="text" id="itemNameInput" placeholder="Material Name (e.g., 18mm Marine Ply)">
-        <input type="number" id="itemQtyInput" placeholder="Quantity">
+        <input type="number" id="itemQtyInput" placeholder="Quantity" inputmode="decimal" step="any">
         <input type="text" id="itemUnitInput" placeholder="Unit (e.g., Sheets, Pcs, Box)">
         <input type="text" id="siteNameInput" placeholder="Site Name / Remarks">
         <button type="button" id="saveEntryBtn" class="btn btn-primary" onclick="submitStockEntry()">Save Transaction</button>
@@ -153,11 +154,25 @@
     const BASE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
     const DEFAULT_SCRIPT = "https://script.google.com/macros/s/AKfycbxNpcZCMiSAUZupBmKZYt_eAIX2q7hVQx-b31Cib7PYwnF-MzI2lwQdZCQFUqKmINylyg/exec";
 
-    let currentUser = JSON.parse(localStorage.getItem("is_user") || "null");
+    let currentUser = null;
+    try { currentUser = JSON.parse(localStorage.getItem("is_user") || "null"); } catch (e) { currentUser = null; }
     let masterConfig = {};
     let companyData = {};
 
-    // Firestore REST Helpers
+    // ---------- Helpers ----------
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function makeKey(text) {
+      // Safe Firestore document ID (works for Bengali / any language too)
+      const slug = text.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
+      let h = 5381;
+      for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
+      return (slug || "item") + "_" + h.toString(36);
+    }
+
+    // ---------- Firestore REST Helpers ----------
     function toFsFields(obj) {
       const fields = {};
       for (const [k, v] of Object.entries(obj)) {
@@ -196,12 +211,16 @@
     }
 
     async function fsList(path) {
-      const res = await fetch(`${BASE_URL}/${path}?pageSize=50`);
-      if (!res.ok) return [];
+      const res = await fetch(`${BASE_URL}/${path}?pageSize=300`);
+      if (!res.ok) {
+        if (res.status === 404) return [];
+        throw new Error("Server error (" + res.status + ")");
+      }
       const data = await res.json();
       return (data.documents || []).map(d => ({ id: d.name.split("/").pop(), ...fromFsDoc(d) }));
     }
 
+    // ---------- Login ----------
     async function handleLogin() {
       const statusEl = document.getElementById("statusMsg");
       const btn = document.getElementById("loginBtn");
@@ -243,8 +262,11 @@
             expiryTime: 0
           });
 
-          const mCfg = await fsGet("saas_config/master");
-          const scriptUrl = (mCfg && mCfg.masterEmailScript) ? mCfg.masterEmailScript : DEFAULT_SCRIPT;
+          let scriptUrl = DEFAULT_SCRIPT;
+          try {
+            const mCfg = await fsGet("saas_config/master");
+            if (mCfg && mCfg.masterEmailScript) scriptUrl = mCfg.masterEmailScript;
+          } catch (e) {}
           fetch(scriptUrl, {
             method: "POST",
             mode: "no-cors",
@@ -266,6 +288,7 @@
           role: role
         };
         localStorage.setItem("is_user", JSON.stringify(currentUser));
+        statusEl.innerText = "";
         initWorkspace();
       } catch (err) {
         btn.disabled = false;
@@ -281,8 +304,28 @@
       document.getElementById("logoutBtn").style.display = "block";
       document.getElementById("brandTitle").innerText = currentUser.companyName || "Interior Stock";
       document.getElementById("subTitle").innerText = `${currentUser.userName} (${currentUser.role.toUpperCase()})`;
-      if (currentUser.role !== "admin") document.getElementById("adminTabBtn").style.display = "none";
+      document.getElementById("adminTabBtn").style.display = currentUser.role !== "admin" ? "none" : "";
       await checkStatusNow();
+    }
+
+    function logoutUser() {
+      localStorage.removeItem("is_user");
+      currentUser = null;
+      companyData = {};
+      document.getElementById("authScreen").style.display = "block";
+      document.getElementById("appScreen").style.display = "none";
+      document.getElementById("lockScreen").style.display = "none";
+      document.getElementById("logoutBtn").style.display = "none";
+      document.getElementById("expiryBanner").style.display = "none";
+      document.getElementById("brandTitle").innerText = "Interior Stock";
+      document.getElementById("subTitle").innerText = "Site & Inventory Management";
+      document.getElementById("statusMsg").innerText = "";
+      const btn = document.getElementById("loginBtn");
+      btn.disabled = false;
+      btn.innerText = "Continue to Workspace";
+      document.getElementById("adminTabBtn").style.display = "";
+      const firstTab = document.querySelector(".tabs .tab-btn");
+      if (firstTab) switchTab("stockTab", firstTab, true);
     }
 
     async function checkStatusNow() {
@@ -312,13 +355,14 @@
           document.getElementById("appScreen").style.display = "block";
           if (companyData.sheetUrl) document.getElementById("clientSheetUrlInput").value = companyData.sheetUrl;
 
-          const daysLeft = Math.ceil((companyData.expiryTime - now) / (1000 * 60 * 60 * 24));
           const banner = document.getElementById("expiryBanner");
-          if (daysLeft <= 5 && daysLeft > 0) {
-            banner.style.display = "block";
-            banner.innerText = `⚠️ Plan expires in ${daysLeft} day(s). Renew soon to avoid interruption.`;
-          } else {
-            banner.style.display = "none";
+          banner.style.display = "none";
+          if (companyData.expiryTime) {
+            const daysLeft = Math.ceil((companyData.expiryTime - now) / (1000 * 60 * 60 * 24));
+            if (daysLeft <= 5 && daysLeft > 0) {
+              banner.style.display = "block";
+              banner.innerText = `⚠️ Plan expires in ${daysLeft} day(s). Renew soon to avoid interruption.`;
+            }
           }
           loadCompanyData();
         }
@@ -337,71 +381,184 @@
       const plan = document.getElementById("planSelect").value;
       if (!/^\d{12}$/.test(utr)) return alert("Enter a valid 12-digit numeric UTR.");
 
-      const existingUtr = await fsGet(`used_utrs/${utr}`);
-      if (existingUtr) return alert("This UTR number has already been used!");
+      try {
+        const existingUtr = await fsGet(`used_utrs/${utr}`);
+        if (existingUtr) return alert("This UTR number has already been used!");
 
-      let days = 30;
-      if (plan.includes("6 Months")) days = 180;
-      if (plan.includes("1 Year")) days = 365;
+        let days = 30;
+        if (plan.includes("6 Months")) days = 180;
+        if (plan.includes("1 Year")) days = 365;
 
-      const newExpiry = Date.now() + (days * 24 * 60 * 60 * 1000);
-      await fsSet(`used_utrs/${utr}`, { companyId: currentUser.companyId, usedAt: Date.now() });
-      await fsSet(`saas_companies/${currentUser.companyId}`, {
-        ...companyData,
-        status: "active",
-        expiryTime: newExpiry,
-        lastUtr: utr,
-        lastPlan: plan
-      });
+        const newExpiry = Date.now() + (days * 24 * 60 * 60 * 1000);
+        await fsSet(`used_utrs/${utr}`, { companyId: currentUser.companyId, usedAt: Date.now() });
+        await fsSet(`saas_companies/${currentUser.companyId}`, {
+          ...companyData,
+          status: "active",
+          expiryTime: newExpiry,
+          lastUtr: utr,
+          lastPlan: plan
+        });
 
-      const scriptUrl = masterConfig.masterEmailScript || DEFAULT_SCRIPT;
-      fetch(scriptUrl, {
-        method: "POST",
-        mode: "no-cors",
-        body: JSON.stringify({
-          action: "RENEWAL_PAYMENT_ALERT",
-          companyName: companyData.companyName,
-          adminEmail: companyData.adminEmail,
-          planName: plan,
-          utr: utr,
-          newExpiry: new Date(newExpiry).toLocaleDateString("en-IN")
-        })
-      }).catch(() => {});
-      alert("UTR Verified! Unlocked instantly.");
-      checkStatusNow();
+        const scriptUrl = masterConfig.masterEmailScript || DEFAULT_SCRIPT;
+        fetch(scriptUrl, {
+          method: "POST",
+          mode: "no-cors",
+          body: JSON.stringify({
+            action: "RENEWAL_PAYMENT_ALERT",
+            companyName: companyData.companyName,
+            adminEmail: companyData.adminEmail,
+            planName: plan,
+            utr: utr,
+            newExpiry: new Date(newExpiry).toLocaleDateString("en-IN")
+          })
+        }).catch(() => {});
+        alert("UTR Verified! Unlocked instantly.");
+        document.getElementById("utrInput").value = "";
+        validateUtrLive();
+        checkStatusNow();
+      } catch (e) {
+        alert("Error: " + e.message);
+      }
     }
 
+    // ---------- Data ----------
     async function loadCompanyData() {
-      const stocks = await fsList(`saas_companies/${currentUser.companyId}/stock`);
-      const sList = document.getElementById("stockList");
-      document.getElementById("totalItemsCount").innerText = stocks.length;
-      if (stocks.length === 0) {
-        sList.innerHTML = '<p class="muted">No stock items yet. Add from Entry tab.</p>';
-      } else {
-        sList.innerHTML = stocks.map(item => `
-          <div class="stock-row">
-            <div><strong>${item.name}</strong><div class="muted">Unit: ${item.unit || "Pcs"}</div></div>
-            <div style="font-size:16px; font-weight:700; color:#0284c7;">${item.qty}</div>
-          </div>`).join("");
-      }
+      if (!currentUser) return;
+      try {
+        const stocks = await fsList(`saas_companies/${currentUser.companyId}/stock`);
+        stocks.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+        const sList = document.getElementById("stockList");
+        document.getElementById("totalItemsCount").innerText = stocks.length;
+        if (stocks.length === 0) {
+          sList.innerHTML = '<p class="muted">No stock items yet. Add from Entry tab.</p>';
+        } else {
+          sList.innerHTML = stocks.map(item => `
+            <div class="stock-row">
+              <div><strong>${escapeHtml(item.name)}</strong><div class="muted">Unit: ${escapeHtml(item.unit || "Pcs")}</div></div>
+              <div style="font-size:16px; font-weight:700; color:#0284c7;">${escapeHtml(item.qty)}</div>
+            </div>`).join("");
+        }
 
-      const logs = await fsList(`saas_companies/${currentUser.companyId}/logs`);
-      logs.sort((a, b) => (b.time || 0) - (a.time || 0));
-      const lList = document.getElementById("logsList");
-      document.getElementById("totalLogsCount").innerText = logs.length;
-      if (logs.length === 0) {
-        lList.innerHTML = '<p class="muted">No transactions yet.</p>';
-      } else {
-        lList.innerHTML = logs.slice(0, 25).map(l => `
-          <div class="stock-row">
-            <div>
-              <span class="badge ${l.type === 'OUT' ? 'badge-out' : 'badge-in'}">${l.type}</span> <strong>${l.name}</strong>
-              <div class="muted">${l.site || "General"} • By ${l.by}</div>
-            </div>
-            <strong>${l.qty} ${l.unit}</strong>
-          </div>`).join("");
+        const logs = await fsList(`saas_companies/${currentUser.companyId}/logs`);
+        logs.sort((a, b) => (b.time || 0) - (a.time || 0));
+        const lList = document.getElementById("logsList");
+        document.getElementById("totalLogsCount").innerText = logs.length;
+        if (logs.length === 0) {
+          lList.innerHTML = '<p class="muted">No transactions yet.</p>';
+        } else {
+          lList.innerHTML = logs.slice(0, 25).map(l => `
+            <div class="stock-row">
+              <div>
+                <span class="badge ${l.type === 'OUT' ? 'badge-out' : 'badge-in'}">${escapeHtml(l.type)}</span> <strong>${escapeHtml(l.name)}</strong>
+                <div class="muted">${escapeHtml(l.site || "General")} • By ${escapeHtml(l.by)}${l.time ? " • " + new Date(l.time).toLocaleString("en-IN") : ""}</div>
+              </div>
+              <strong>${escapeHtml(l.qty)} ${escapeHtml(l.unit)}</strong>
+            </div>`).join("");
+        }
+      } catch (e) {
+        alert("Could not load data: " + e.message);
       }
     }
 
     async function submitStockEntry() {
-      const
+      const type = document.getElementById("entryType").value;
+      const name = document.getElementById("itemNameInput").value.trim();
+      const qtyRaw = parseFloat(document.getElementById("itemQtyInput").value);
+      const unit = document.getElementById("itemUnitInput").value.trim() || "Pcs";
+      const site = document.getElementById("siteNameInput").value.trim();
+
+      if (!name) return alert("Please enter the material name.");
+      if (!qtyRaw || qtyRaw <= 0) return alert("Please enter a valid quantity.");
+      const qty = Math.round(qtyRaw * 100) / 100;
+
+      const btn = document.getElementById("saveEntryBtn");
+      btn.disabled = true;
+      btn.innerText = "Saving...";
+
+      try {
+        const base = `saas_companies/${currentUser.companyId}`;
+        const stockKey = makeKey(name + "|" + unit);
+        const existing = await fsGet(`${base}/stock/${stockKey}`);
+        const current = existing ? Number(existing.qty) || 0 : 0;
+
+        if (type === "OUT" && qty > current) {
+          alert(`Not enough stock. Available: ${current} ${unit}`);
+          return;
+        }
+
+        const newQty = Math.round((type === "OUT" ? current - qty : current + qty) * 100) / 100;
+        const now = Date.now();
+
+        await fsSet(`${base}/stock/${stockKey}`, { name: name, unit: unit, qty: newQty, updatedAt: now });
+        await fsSet(`${base}/logs/${now}_${Math.floor(Math.random() * 1000)}`, {
+          type: type,
+          name: name,
+          qty: qty,
+          unit: unit,
+          site: site,
+          by: currentUser.userName,
+          time: now
+        });
+
+        // Optional: push to the company's own Google Sheet
+        if (companyData && companyData.sheetUrl) {
+          fetch(companyData.sheetUrl, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify({
+              action: "STOCK_ENTRY",
+              type: type,
+              name: name,
+              qty: qty,
+              unit: unit,
+              site: site,
+              by: currentUser.userName,
+              balance: newQty,
+              time: new Date(now).toLocaleString("en-IN")
+            })
+          }).catch(() => {});
+        }
+
+        document.getElementById("itemNameInput").value = "";
+        document.getElementById("itemQtyInput").value = "";
+        document.getElementById("itemUnitInput").value = "";
+        document.getElementById("siteNameInput").value = "";
+        alert("Saved! New balance: " + newQty + " " + unit);
+        switchTab("stockTab", document.querySelector(".tabs .tab-btn"));
+      } catch (e) {
+        alert("Save error: " + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Save Transaction";
+      }
+    }
+
+    async function saveClientSheetUrl() {
+      const url = document.getElementById("clientSheetUrlInput").value.trim();
+      if (!/^https:\/\/script\.google\.com\/.+/.test(url)) {
+        return alert("Please paste a valid Google Apps Script URL (starts with https://script.google.com/).");
+      }
+      try {
+        await fsSet(`saas_companies/${currentUser.companyId}`, { ...companyData, sheetUrl: url });
+        companyData.sheetUrl = url;
+        alert("Sheet URL saved. New entries will now sync to your sheet.");
+      } catch (e) {
+        alert("Save error: " + e.message);
+      }
+    }
+
+    // ---------- Tabs ----------
+    function switchTab(tabId, btn, skipLoad) {
+      ["stockTab", "entryTab", "logsTab", "settingsTab"].forEach(id => {
+        document.getElementById(id).style.display = (id === tabId) ? "block" : "none";
+      });
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+      if (!skipLoad && currentUser && (tabId === "stockTab" || tabId === "logsTab")) loadCompanyData();
+    }
+
+    // Auto-login if already signed in on this device
+    if (currentUser) initWorkspace();
+  </script>
+</body>
+</html>
