@@ -3,358 +3,390 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Interior Stock Manager</title>
-  <meta name="theme-color" content="#0f172a">
+  <title>Interior Stock</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: #f1f5f9; color: #1e293b; padding-bottom: 75px; }
-    header { background: #0f172a; color: #fff; padding: 15px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-    .brand h1 { font-size: 17px; font-weight: 700; }
-    .header-actions { display: flex; gap: 8px; align-items: center; }
-    .sync-dot { width: 9px; height: 9px; border-radius: 50%; background: #22c55e; display: inline-block; }
-    .btn-icon { background: rgba(255,255,255,0.16); border: none; color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
-    .container { max-width: 600px; margin: 0 auto; padding: 14px; }
-    .action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
-    .badge-btn { border: none; border-radius: 12px; padding: 16px 12px; color: #fff; font-weight: 700; font-size: 14px; text-align: left; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; min-height: 76px; box-shadow: 0 3px 6px rgba(0,0,0,0.08); }
-    .badge-btn small { font-size: 11px; font-weight: 400; opacity: 0.92; margin-top: 4px; }
-    .b-in { background: #16a34a; }
-    .b-out { background: #dc2626; }
-    .b-ret { background: #d97706; }
-    .b-used { background: #7c3aed; }
-    .b-tr { background: #0284c7; grid-column: span 2; min-height: 62px; flex-direction: row; align-items: center; }
-    .card { background: #fff; border-radius: 14px; padding: 16px; border: 1px solid #e2e8f0; margin-bottom: 14px; }
-    .card-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; color: #0f172a; }
-    .form-group { margin-bottom: 12px; position: relative; }
-    label { display: block; font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 5px; }
-    input, select { width: 100%; padding: 11px 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 14px; background: #fff; color: #1e293b; }
-    .search-results { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1.5px solid #2563eb; border-radius: 10px; max-height: 200px; overflow-y: auto; z-index: 50; display: none; }
-    .search-item { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-    .btn { width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; }
-    .btn-primary { background: #2563eb; color: #fff; }
+    body { background: #f1f5f9; color: #0f172a; padding-bottom: 70px; }
+    .topbar { background: #0f172a; color: #fff; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+    .topbar h1 { font-size: 18px; font-weight: 700; color: #38bdf8; }
+    .topbar small { font-size: 11px; color: #94a3b8; display: block; }
+    .container { padding: 14px; max-width: 600px; margin: 0 auto; }
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+    .card h2 { font-size: 15px; margin-bottom: 12px; color: #1e293b; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+    input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: #fff; }
+    .btn { width: 100%; padding: 13px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
+    .btn-primary { background: #0284c7; color: #fff; }
     .btn-success { background: #16a34a; color: #fff; }
-    .btn-outline { background: #fff; border: 1.5px solid #cbd5e1; color: #1e293b; }
-    .tabs { display: flex; gap: 6px; margin-bottom: 12px; background: #e2e8f0; padding: 4px; border-radius: 10px; }
-    .tab { flex: 1; padding: 8px; text-align: center; font-size: 12px; font-weight: 700; border-radius: 8px; cursor: pointer; color: #64748b; }
-    .tab.active { background: #fff; color: #0f172a; }
-    .stock-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
-    .stock-name { font-size: 13px; font-weight: 600; }
-    .stock-meta { font-size: 11px; color: #64748b; margin-top: 2px; }
-    .stock-qty { font-size: 13px; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: #f1f5f9; }
-    .overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.75); z-index: 200; display: none; align-items: center; justify-content: center; padding: 16px; }
-    .modal { background: #fff; width: 100%; max-width: 440px; border-radius: 16px; padding: 20px; max-height: 90vh; overflow-y: auto; }
-    .preview-box { background: #f8fafc; border: 1.5px dashed #94a3b8; border-radius: 10px; padding: 12px; margin: 12px 0; font-size: 13px; line-height: 1.7; }
-    .toast { position: fixed; bottom: 75px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 18px; border-radius: 30px; font-size: 13px; font-weight: 600; z-index: 350; display: none; }
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e2e8f0; display: flex; z-index: 90; }
-    .nav-item { flex: 1; padding: 12px 4px; text-align: center; font-size: 12px; font-weight: 700; color: #64748b; cursor: pointer; }
-    .nav-item.active { color: #2563eb; background: #f8fafc; }
-    .hidden { display: none !important; }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-outline { background: #f8fafc; color: #0f172a; border: 1px solid #cbd5e1; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .stat-box { background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; }
+    .stat-box h3 { font-size: 20px; color: #0284c7; }
+    .stat-box p { font-size: 12px; color: #64748b; }
+    .stock-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+    .stock-row:last-child { border-bottom: none; }
+    .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-in { background: #dcfce7; color: #166534; }
+    .badge-out { background: #fee2e2; color: #991b1b; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; }
+    .tab-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .tab-btn.active { background: #0f172a; color: #fff; border-color: #0f172a; }
+    .overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .overlay-box { background: #fff; border-radius: 14px; padding: 20px; max-width: 420px; width: 100%; }
+    .utr-wrap { position: relative; }
+    .utr-tick { position: absolute; right: 12px; top: 12px; color: #16a34a; font-weight: 700; font-size: 14px; display: none; }
+    .banner-warn { background: #fef3c7; color: #92400e; padding: 10px 14px; font-size: 12px; font-weight: 600; text-align: center; }
+    .muted { color: #64748b; font-size: 12px; line-height: 1.5; }
   </style>
 </head>
 <body>
 
-  <header>
-    <div class="brand">
-      <h1 id="appHeaderTitle">Interior Stock Manager</h1>
+  <div class="topbar">
+    <div>
+      <h1 id="brandTitle">Interior Stock</h1>
+      <small id="subTitle">Site & Inventory Management</small>
     </div>
-    <div class="header-actions">
-      <span class="sync-dot"></span>
-      <button type="button" class="btn-icon" id="btnAdminOpen">Admin</button>
-    </div>
-  </header>
+    <button id="logoutBtn" class="btn-outline" style="width:auto; padding:6px 10px; font-size:12px; display:none;" onclick="logoutUser()">Logout</button>
+  </div>
 
-  <div class="container">
-    <div id="viewHome">
-      <div class="action-grid">
-        <button type="button" class="badge-btn b-in" id="btnStockIn">
-          <span>+ STOCK IN</span>
-          <small>New Purchase / Direct Site</small>
-        </button>
-        <button type="button" class="badge-btn b-out" id="btnStockOut">
-          <span>- STOCK OUT</span>
-          <small>Send to Site / Vendor Ret.</small>
-        </button>
-        <button type="button" class="badge-btn b-ret" id="btnReturn">
-          <span>↺ RETURN</span>
-          <small>Site Leftover to Used Stock</small>
-        </button>
-        <button type="button" class="badge-btn b-used" id="btnUsed">
-          <span>⚡ USED ITEM</span>
-          <small>Issue Open Wire / Used Mat.</small>
-        </button>
-        <button type="button" class="badge-btn b-tr" id="btnTransfer">
-          <div>
-            <span>⇄ SITE TRANSFER</span>
-            <small style="display:block;">Direct Site-to-Site Material Transfer</small>
-          </div>
-          <span style="font-size:20px;">→</span>
-        </button>
+  <div id="expiryBanner" class="banner-warn" style="display:none;"></div>
+
+  <!-- 1. Login / Company Registration Screen -->
+  <div id="authScreen" class="container" style="margin-top:24px;">
+    <div class="card">
+      <h2>🏢 Company / Staff Login</h2>
+      <p class="muted" style="margin-bottom:12px;">Enter your Company ID (Admin Email) to access or register your workspace.</p>
+      <input type="text" id="companyNameInput" placeholder="Company Name (e.g., Studio Space)">
+      <input type="text" id="userNameInput" placeholder="Your Name (Admin / Supervisor)">
+      <input type="email" id="companyEmailInput" placeholder="Company Admin Gmail ID">
+      <select id="userRoleInput">
+        <option value="admin">Role: Company Owner / Admin</option>
+        <option value="supervisor">Role: Site Supervisor</option>
+      </select>
+      <button class="btn btn-primary" onclick="handleLogin()">Continue to Workspace</button>
+    </div>
+  </div>
+
+  <!-- 2. Pending / Expired Lock Screen -->
+  <div id="lockScreen" class="overlay" style="display:none;">
+    <div class="overlay-box">
+      <h2 id="lockTitle" style="margin-bottom:8px; color:#dc2626;">⏳ Approval Pending</h2>
+      <p id="lockDesc" class="muted" style="margin-bottom:14px;">Your registration request has been sent to the Master Owner. Please wait for approval.</p>
+      
+      <div id="renewalSection" style="display:none; border-top:1px solid #e2e8f0; padding-top:12px;">
+        <p style="font-size:13px; font-weight:600; margin-bottom:6px;">Instant Renewal (Zero Data Loss)</p>
+        <p class="muted" style="margin-bottom:8px;">Pay via UPI to: <b id="displayUpi">Contact Owner</b></p>
+        <select id="planSelect">
+          <option value="1 Month Plan">1 Month Subscription</option>
+          <option value="6 Months Plan">6 Months Subscription</option>
+          <option value="1 Year Plan">1 Year Subscription</option>
+        </select>
+        <div class="utr-wrap">
+          <input type="number" id="utrInput" placeholder="Enter 12-Digit UPI UTR Number" oninput="validateUtrLive()">
+          <span id="utrGreenTick" class="utr-tick">✓ Valid UTR</span>
+        </div>
+        <button class="btn btn-success" onclick="submitRenewalUtr()">Verify UTR & Unlock Instantly</button>
       </div>
+      <button class="btn btn-outline" style="margin-top:10px;" onclick="logoutUser()">Switch Account</button>
+    </div>
+  </div>
 
+  <!-- 3. Main Workspace App -->
+  <div id="appScreen" class="container" style="display:none;">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('stockTab', this)">📦 Stock</button>
+      <button class="tab-btn" onclick="switchTab('entryTab', this)">➕ Entry</button>
+      <button class="tab-btn" onclick="switchTab('logsTab', this)">📋 Logs</button>
+      <button class="tab-btn" id="adminTabBtn" onclick="switchTab('settingsTab', this)">⚙️ Sheet Sync</button>
+    </div>
+
+    <!-- Stock Summary Tab -->
+    <div id="stockTab">
+      <div class="grid-2">
+        <div class="stat-box"><h3 id="totalItemsCount">0</h3><p>Total Materials</p></div>
+        <div class="stat-box"><h3 id="totalLogsCount">0</h3><p>Transactions</p></div>
+      </div>
       <div class="card">
-        <div class="card-title">
-          <span>Recent Entries (Live)</span>
-          <span style="font-size:11px; color:#2563eb;" id="staffQuotaBadge">Users: 1/12</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h2 style="border:none; margin:0; padding:0;">Live Inventory</h2>
+          <button class="btn-outline" style="width:auto; padding:5px 10px; font-size:12px;" onclick="syncFromGoogleSheet()">🔄 Sync Sheet</button>
         </div>
-        <div id="recentLogsList">
-          <div style="text-align:center; color:#64748b; font-size:13px; padding:15px;">No transactions recorded yet today.</div>
-        </div>
+        <div id="stockList"><p class="muted">No stock items yet.</p></div>
       </div>
     </div>
 
-    <div id="viewStock" class="hidden">
-      <div class="tabs">
-        <div class="tab active" id="tabFresh">FRESH GODOWN STOCK</div>
-        <div class="tab" id="tabUsed">USED / OPEN STOCK</div>
+    <!-- Stock In / Out Entry Tab -->
+    <div id="entryTab" style="display:none;">
+      <div class="card">
+        <h2>➕ Stock In / Out Entry</h2>
+        <select id="entryType">
+          <option value="IN">STOCK IN (Purchase / Godown)</option>
+          <option value="OUT">STOCK OUT (Site Issue)</option>
+          <option value="RETURN">RETURN (Site to Godown)</option>
+        </select>
+        <input type="text" id="itemNameInput" placeholder="Material Name (e.g., 18mm Marine Ply)">
+        <input type="number" id="itemQtyInput" placeholder="Quantity">
+        <input type="text" id="itemUnitInput" placeholder="Unit (e.g., Sheets, Pcs, Box)">
+        <input type="text" id="siteNameInput" placeholder="Site Name / Remarks">
+        <button class="btn btn-primary" onclick="submitStockEntry()">Save Transaction</button>
       </div>
-      <div class="form-group">
-        <input type="text" id="stockFilterInput" placeholder="Search item in stock...">
-      </div>
-      <div class="card" id="stockListContainer"></div>
     </div>
-  </div>
 
-  <div class="bottom-nav">
-    <div class="nav-item active" id="navHome">⚡ QUICK ENTRY</div>
-    <div class="nav-item" id="navStock">📦 LIVE STOCK</div>
-  </div>
-
-  <!-- MODAL 1: STOCK ENTRY FORM -->
-  <div class="overlay" id="entryModal">
-    <div class="modal">
-      <div class="card-title">
-        <span id="formModalTitle">STOCK IN</span>
-        <button type="button" class="btn-outline" style="width:auto; padding:4px 10px;" id="closeEntryBtn">✕</button>
+    <!-- Transaction Logs Tab -->
+    <div id="logsTab" style="display:none;">
+      <div class="card">
+        <h2>📋 Recent Movements</h2>
+        <div id="logsList"><p class="muted">No transactions recorded.</p></div>
       </div>
-      <div class="form-group">
-        <label>Destination / Type</label>
-        <select id="entrySubType"></select>
-      </div>
-      <div class="form-group" id="siteSelectGroup">
-        <label>Select Project Site</label>
-        <select id="entrySite"></select>
-      </div>
-      <div class="form-group">
-        <label>Search & Select Item (143 Standard Items)</label>
-        <input type="text" id="itemSearchInput" placeholder="Type item name (e.g. 1.5 sqmm wire, BWP Ply)..." autocomplete="off">
-        <div class="search-results" id="itemDropdown"></div>
-      </div>
-      <div class="form-group">
-        <label id="qtyInputLabel">Quantity / Weight</label>
-        <div style="display:flex; gap:8px;">
-          <input type="number" step="0.001" id="entryQty" placeholder="0.00">
-          <input type="text" id="entryUnit" readonly style="width:95px; background:#f1f5f9; font-weight:700; text-align:center;" value="UNIT">
-        </div>
-        <small id="wireWeightWarning" style="color:#dc2626; font-weight:600; display:none; margin-top:4px;">⚠️ Electric Wire: Enter exact Weight in KG only!</small>
-      </div>
-      <div class="form-group">
-        <label>Remarks / Bill No. (Optional)</label>
-        <input type="text" id="entryRemarks" placeholder="e.g. Vendor name or floor detail">
-      </div>
-      <button type="button" class="btn btn-primary" id="btnShowPreview">PREVIEW ENTRY →</button>
     </div>
-  </div>
 
-  <!-- MODAL 2: SITE TRANSFER -->
-  <div class="overlay" id="transferModal">
-    <div class="modal">
-      <div class="card-title">
-        <span>⇄ SITE TO SITE TRANSFER</span>
-        <button type="button" class="btn-outline" style="width:auto; padding:4px 10px;" id="closeTrBtn">✕</button>
-      </div>
-      <div class="form-group">
-        <label>From Site (Sender)</label>
-        <select id="trFromSite"></select>
-      </div>
-      <div class="form-group">
-        <label>To Site (Receiver)</label>
-        <select id="trToSite"></select>
-      </div>
-      <div class="form-group">
-        <label>Search Item</label>
-        <input type="text" id="trItemSearch" placeholder="Type item name..." autocomplete="off">
-        <div class="search-results" id="trItemDropdown"></div>
-      </div>
-      <div class="form-group">
-        <label>Quantity / Weight</label>
-        <div style="display:flex; gap:8px;">
-          <input type="number" step="0.001" id="trQty" placeholder="0.00">
-          <input type="text" id="trUnit" readonly style="width:95px; background:#f1f5f9; font-weight:700; text-align:center;" value="UNIT">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Remarks (Optional)</label>
-        <input type="text" id="trRemarks" placeholder="e.g. Sent via tempo">
-      </div>
-      <button type="button" class="btn btn-primary" id="btnShowTrPreview">PREVIEW TRANSFER →</button>
-    </div>
-  </div>
-
-  <!-- MODAL 3: PREVIEW & CONFIRM -->
-  <div class="overlay" id="previewModal" style="z-index:220;">
-    <div class="modal">
-      <div class="card-title"><span>Confirm Entry Details</span></div>
-      <div class="preview-box" id="previewContent"></div>
-      <div style="display:flex; gap:10px;">
-        <button type="button" class="btn btn-outline" id="btnEditPreview">EDIT</button>
-        <button type="button" class="btn btn-success" id="btnFinalOk">✓ CONFIRM & OK</button>
+    <!-- Client Private Google Sheet Setup (Admin Only) -->
+    <div id="settingsTab" style="display:none;">
+      <div class="card">
+        <h2>🔗 Your Private Google Sheet (Two-Way Sync)</h2>
+        <p class="muted" style="margin-bottom:10px;">Connect your own Google Sheet Web App URL. Only you have access to your sheet. Any manual edit you make in your Google Sheet will sync back here.</p>
+        <input type="url" id="clientSheetUrlInput" placeholder="Paste your Google Apps Script URL">
+        <button class="btn btn-primary" onclick="saveClientSheetUrl()">Save & Sync My Sheet</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL 4: COMPANY ADMIN / STAFF SETUP -->
-  <div class="overlay" id="loginSetupModal" style="z-index:260;">
-    <div class="modal">
-      <div class="card-title"><span>🔐 Company & User Setup</span></div>
-      <div class="tabs">
-        <div class="tab active" id="tabRoleAdmin">COMPANY ADMIN</div>
-        <div class="tab" id="tabRoleStaff">STAFF (MAX 12)</div>
-      </div>
-      <div id="adminSetupForm">
-        <div class="form-group">
-          <label>License Key</label>
-          <input type="text" id="setupLicenseKey" placeholder="Enter License Key (INT-HUB-2026)">
-        </div>
-        <div class="form-group">
-          <label>Company Admin Email ID *</label>
-          <input type="email" id="setupAdminEmail" placeholder="owner@company.com">
-        </div>
-        <div class="form-group">
-          <label>Admin Full Name *</label>
-          <input type="text" id="setupAdminName" placeholder="Enter Admin Name">
-        </div>
-        <div class="form-group">
-          <label>Header Display Name (Shown on Top Bar) *</label>
-          <input type="text" id="setupCompanyDisplayName" placeholder="e.g. Interior Stock Manager or Firm Name">
-        </div>
-        <div class="form-group">
-          <label>Set Admin Password *</label>
-          <input type="password" id="setupAdminPass" placeholder="Create password (e.g. admin123)">
-        </div>
-        <button type="button" class="btn btn-primary" id="btnSaveAdminSetup">LOGIN & SAVE PROFILE</button>
-      </div>
-      <div id="staffSetupForm" class="hidden">
-        <div class="form-group">
-          <label>Company Admin Email ID *</label>
-          <input type="email" id="staffCompanyEmail" placeholder="Enter Company Admin Email ID">
-        </div>
-        <div class="form-group">
-          <label>Your Staff Name *</label>
-          <input type="text" id="staffFullName" placeholder="Enter your name">
-        </div>
-        <button type="button" class="btn btn-primary" id="btnSaveStaffSetup">ACTIVATE STAFF DEVICE</button>
-      </div>
-    </div>
-  </div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  <!-- MODAL 5: ADMIN PANEL -->
-  <div class="overlay" id="adminModal" style="z-index:240;">
-    <div class="modal">
-      <div class="card-title">
-        <span>🛡️ Admin Control Panel</span>
-        <button type="button" class="btn-outline" style="width:auto; padding:4px 10px;" id="closeAdminBtn">✕</button>
-      </div>
-      <div id="adminLoginBox">
-        <div class="form-group">
-          <label>Enter Admin Password</label>
-          <input type="password" id="adminPassInput" placeholder="Enter Admin Password">
-        </div>
-        <button type="button" class="btn btn-primary" id="btnVerifyAdmin">UNLOCK ADMIN</button>
-      </div>
-      <div id="adminDashboardBox" class="hidden">
-        <div style="background:#f8fafc; padding:12px; border-radius:10px; border:1px solid #cbd5e1; margin-bottom:14px;">
-          <div style="font-size:13px; font-weight:700; margin-bottom:8px;">✏️ Edit Company & Admin Profile</div>
-          <div class="form-group">
-            <label>Top Header Display Name</label>
-            <input type="text" id="editHeaderName">
-          </div>
-          <div class="form-group">
-            <label>Admin Name</label>
-            <input type="text" id="editAdminName">
-          </div>
-          <div class="form-group">
-            <label>Admin Email ID</label>
-            <input type="email" id="editAdminEmail">
-          </div>
-          <button type="button" class="btn btn-primary" id="btnUpdateProfile">UPDATE & SAVE PROFILE</button>
-        </div>
-        <div class="form-group">
-          <label>Add New Project Site</label>
-          <div style="display:flex; gap:6px;">
-            <input type="text" id="newSiteName" placeholder="Site Name">
-            <button type="button" class="btn btn-success" style="width:85px;" id="btnAddSite">+ ADD</button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Active Sites</label>
-          <div id="adminSitesList" style="max-height:100px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:8px; padding:8px; font-size:12px;"></div>
-        </div>
-        <div class="form-group">
-          <label>Registered Staff Devices (Max 12)</label>
-          <div id="adminStaffList" style="max-height:110px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:8px; padding:8px; font-size:12px;"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBW8ZkJEjAjHh8CDJ3yJvcRYwQRhHBkkH4",
+      authDomain: "interior-stock-app-c7a1f.firebaseapp.com",
+      projectId: "interior-stock-app-c7a1f",
+      storageBucket: "interior-stock-app-c7a1f.firebasestorage.app",
+      messagingSenderId: "353218241112",
+      appId: "1:353218241112:web:5c8ae04253ea372d41e02d"
+    };
 
-  <div class="toast" id="toastMsg">Saved!</div>
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    let currentUser = JSON.parse(localStorage.getItem("is_user") || "null");
+    let masterConfig = {};
+    let companyData = {};
 
-  <script>
-    var MASTER_LICENSE_KEY = "INT-HUB-2026";
-    var GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHdDAgCpqAoK_z4GPm_yV3BPzeSFdrvLgn9MOMJC8W0nkmXIVdbl5-qMscltepl3yW5A/exec";
+    async function loadMasterConfig() {
+      const snap = await getDoc(doc(db, "saas_config", "master"));
+      if (snap.exists()) masterConfig = snap.data();
+    }
 
-    var MASTER_ITEMS = [
-      { name: "BWP Marine Ply 19mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "BWP Marine Ply 16mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "BWP Marine Ply 12mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "BWP Marine Ply 9mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "BWP Marine Ply 6mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "MR Commercial Ply 19mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "MR Commercial Ply 12mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "MR Commercial Ply 6mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "BWP Block Board 19mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "BWP Block Board 25mm (8x4)", cat: "Plywood", unit: "Sheet" },
-      { name: "HDHMR Board 18mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "HDHMR Board 12mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "HDHMR Board 8mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "MDF Board 18mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "MDF Board 12mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "MDF Board 6mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "WPC Board 18mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "WPC Board 12mm (8x4)", cat: "Boards", unit: "Sheet" },
-      { name: "Outer Laminate 1mm (8x4)", cat: "Laminate", unit: "Sheet" },
-      { name: "Outer Laminate 0.8mm (8x4)", cat: "Laminate", unit: "Sheet" },
-      { name: "Inner White Liner Laminate 0.72mm", cat: "Laminate", unit: "Sheet" },
-      { name: "Acrylic Laminate Sheet 1.5mm", cat: "Laminate", unit: "Sheet" },
-      { name: "PVC Laminate Sheet 1.25mm", cat: "Laminate", unit: "Sheet" },
-      { name: "Natural Teak Veneer Sheet (8x4)", cat: "Veneer", unit: "Sheet" },
-      { name: "Charcoal Louver Panel (8ft)", cat: "Wall Panel", unit: "Pc" },
-      { name: "WPC Fluted Panel (9.5ft)", cat: "Wall Panel", unit: "Pc" },
-      { name: "PVC Edge Banding Tape 22x0.8mm", cat: "Edge Band", unit: "Roll" },
-      { name: "PVC Edge Banding Tape 22x2mm", cat: "Edge Band", unit: "Roll" },
-      { name: "PVC Edge Banding Tape 30x2mm", cat: "Edge Band", unit: "Roll" },
-      { name: "PVC Edge Banding Tape 45x2mm", cat: "Edge Band", unit: "Roll" },
-      { name: "Acrylic Edge Banding Tape 22x1.3mm", cat: "Edge Band", unit: "Roll" },
-      { name: "Edge Banding Hotmelt Glue Granules", cat: "Adhesive", unit: "KG" },
-      { name: "Teak Wood Beading Patti (8ft)", cat: "Wood", unit: "Pc" },
-      { name: "Pine Wood Batten (2x1.5 inch)", cat: "Wood", unit: "Pc" },
-      { name: "Fevicol SH / Marine (50 KG Drum)", cat: "Adhesive", unit: "KG" },
-      { name: "Fevicol Probond (PVC/Acrylic)", cat: "Adhesive", unit: "KG" },
-      { name: "Fevicol Heatx (Fast Contact)", cat: "Adhesive", unit: "Ltr" },
-      { name: "Fevicol SR 998", cat: "Adhesive", unit: "Ltr" },
-      { name: "Cyanoacrylate Super Glue (50gm)", cat: "Adhesive", unit: "Pc" },
-      { name: "Silicone Sealant Clear (300ml)", cat: "Adhesive", unit: "Pc" },
-      { name: "Silicone Sealant White (300ml)", cat: "Adhesive", unit: "Pc" },
-      { name: "Silicone Sealant Black (300ml)", cat: "Adhesive", unit: "Pc" },
-      { name: "Masking Tape 1 inch", cat: "Consumable", unit: "Roll" },
-      { name: "Masking Tape 2 inch", cat: "Consumable", unit: "Roll" },
-      { name: "Double Sided Foam Tape", cat: "Consumable", unit: "Roll" },
-      { name: "Brown Packing Tape 2 inch", cat: "Consumable", unit: "Roll" },
-      { name: "Soft Close Hinge 0 Crank (Full Overlay)", cat: "Hardware", unit: "Pair" },
-      { name: "Soft Close Hinge 8 Crank (Half Overlay)", cat: "Hardware", unit: "Pair" },
-      { name: "Soft Close Hinge 16 Crank (Inset)", cat: "Hardware", unit: "Pair" },
-      { name: "165 Degree Corner Hinge", cat: "Hardware", unit: "Pair" },
-      { name: "Telescopic Channel 10 inch (45kg)", cat: "Hardware", unit: "Pair" },
-      { name: "Telescopic Channel 12 inch (45kg)", cat: "Hardware", unit: "Pair" },
-      { name: "Telescopic Channel 14 inch (45kg)", cat: "Hardware", unit: "Pair" },
-      { name: "Telescopic Channel 16 inch (45kg)", cat: "Hardware", unit: "Pair" },
-      { name: "Telescopic Channel 18 inch (45kg)", cat: "Hardwa
+    window.handleLogin = async function() {
+      const companyName = document.getElementById("companyNameInput").value.trim();
+      const userName = document.getElementById("userNameInput").value.trim();
+      const email = document.getElementById("companyEmailInput").value.trim().toLowerCase();
+      const role = document.getElementById("userRoleInput").value;
+
+      if (!email || !userName) return alert("Please enter your Name and Company Email.");
+      const companyId = email.replace(/[^a-z0-9]/g, "_");
+      const compRef = doc(db, "saas_companies", companyId);
+      const compSnap = await getDoc(compRef);
+
+      if (!compSnap.exists()) {
+        if (!companyName) return alert("New company registration requires Company Name.");
+        const vCode = Math.floor(100000 + Math.random() * 900000);
+        await setDoc(compRef, {
+          companyName,
+          adminEmail: email,
+          status: "pending",
+          verificationCode: vCode,
+          createdAt: Date.now(),
+          expiryTime: 0
+        });
+        await loadMasterConfig();
+        if (masterConfig.masterEmailScript) {
+          fetch(masterConfig.masterEmailScript, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify({
+              action: "NEW_COMPANY_REQUEST",
+              companyName,
+              adminName: userName,
+              adminEmail: email,
+              verificationCode: vCode
+            })
+          });
+        }
+      }
+
+      currentUser = { companyId, companyName: compSnap.exists() ? compSnap.data().companyName : companyName, userName, email, role };
+      localStorage.setItem("is_user", JSON.stringify(currentUser));
+      initWorkspace();
+    };
+
+    async function initWorkspace() {
+      if (!currentUser) return;
+      await loadMasterConfig();
+      document.getElementById("authScreen").style.display = "none";
+      document.getElementById("logoutBtn").style.display = "block";
+      document.getElementById("brandTitle").innerText = currentUser.companyName || "Interior Stock";
+      document.getElementById("subTitle").innerText = `${currentUser.userName} (${currentUser.role.toUpperCase()})`;
+      if (currentUser.role !== "admin") document.getElementById("adminTabBtn").style.display = "none";
+
+      onSnapshot(doc(db, "saas_companies", currentUser.companyId), (snap) => {
+        if (!snap.exists()) return;
+        companyData = snap.data();
+        const now = Date.now();
+        const isExpired = companyData.expiryTime && now > companyData.expiryTime;
+
+        if (companyData.status === "pending") {
+          document.getElementById("appScreen").style.display = "none";
+          document.getElementById("lockScreen").style.display = "flex";
+          document.getElementById("lockTitle").innerText = "⏳ Approval Pending";
+          document.getElementById("lockDesc").innerText = `Request sent to Master Owner for ${companyData.companyName}. Once approved, this screen will unlock automatically.`;
+          document.getElementById("renewalSection").style.display = "none";
+        } else if (companyData.status === "locked" || isExpired) {
+          document.getElementById("appScreen").style.display = "none";
+          document.getElementById("lockScreen").style.display = "flex";
+          document.getElementById("lockTitle").innerText = "🔒 Subscription Expired";
+          document.getElementById("lockDesc").innerText = "Your plan has expired. Enter your 12-digit UPI UTR number below to unlock instantly without losing any data.";
+          document.getElementById("renewalSection").style.display = "block";
+          document.getElementById("displayUpi").innerText = masterConfig.upiId || "Ask Owner for UPI ID";
+        } else {
+          document.getElementById("lockScreen").style.display = "none";
+          document.getElementById("appScreen").style.display = "block";
+          if (companyData.sheetUrl) document.getElementById("clientSheetUrlInput").value = companyData.sheetUrl;
+          
+          const daysLeft = Math.ceil((companyData.expiryTime - now) / (1000 * 60 * 60 * 24));
+          const banner = document.getElementById("expiryBanner");
+          if (daysLeft <= 5 && daysLeft > 0) {
+            banner.style.display = "block";
+            banner.innerText = `⚠️ Plan expires in ${daysLeft} day(s). Renew soon to avoid interruption.`;
+          } else {
+            banner.style.display = "none";
+          }
+          listenCompanyStock();
+        }
+      });
+    }
+
+    window.validateUtrLive = function() {
+      const val = document.getElementById("utrInput").value.trim();
+      const tick = document.getElementById("utrGreenTick");
+      tick.style.display = /^\d{12}$/.test(val) ? "inline" : "none";
+    };
+
+    window.submitRenewalUtr = async function() {
+      const utr = document.getElementById("utrInput").value.trim();
+      const plan = document.getElementById("planSelect").value;
+      if (!/^\d{12}$/.test(utr)) return alert("Please enter a valid 12-digit numeric UTR number.");
+
+      const utrRef = doc(db, "used_utrs", utr);
+      const utrSnap = await getDoc(utrRef);
+      if (utrSnap.exists()) return alert("This UTR number has already been used!");
+
+      let days = 30;
+      if (plan.includes("6 Months")) days = 180;
+      if (plan.includes("1 Year")) days = 365;
+
+      const newExpiry = Date.now() + (days * 24 * 60 * 60 * 1000);
+      await setDoc(utrRef, { companyId: currentUser.companyId, usedAt: Date.now() });
+      await updateDoc(doc(db, "saas_companies", currentUser.companyId), {
+        status: "active",
+        expiryTime: newExpiry,
+        lastUtr: utr,
+        lastPlan: plan
+      });
+
+      if (masterConfig.masterEmailScript) {
+        fetch(masterConfig.masterEmailScript, {
+          method: "POST",
+          mode: "no-cors",
+          body: JSON.stringify({
+            action: "RENEWAL_PAYMENT_ALERT",
+            companyName: companyData.companyName,
+            adminEmail: companyData.adminEmail,
+            planName: plan,
+            utr: utr,
+            newExpiry: new Date(newExpiry).toLocaleDateString("en-IN")
+          })
+        });
+      }
+      alert("UTR Verified! Your app is unlocked instantly.");
+    };
+
+    function listenCompanyStock() {
+      const stockCol = collection(db, "saas_companies", currentUser.companyId, "stock");
+      onSnapshot(stockCol, (snap) => {
+        const list = document.getElementById("stockList");
+        document.getElementById("totalItemsCount").innerText = snap.size;
+        if (snap.empty) {
+          list.innerHTML = '<p class="muted">No stock items yet. Add from Entry tab or Sync Sheet.</p>';
+          return;
+        }
+        list.innerHTML = "";
+        snap.forEach((d) => {
+          const item = d.data();
+          list.innerHTML += `
+            <div class="stock-row">
+              <div><strong>${item.name}</strong><div class="muted">Unit: ${item.unit || "Pcs"}</div></div>
+              <div style="font-size:16px; font-weight:700; color:#0284c7;">${item.qty}</div>
+            </div>`;
+        });
+      });
+
+      const logsCol = query(collection(db, "saas_companies", currentUser.companyId, "logs"), orderBy("time", "desc"), limit(20));
+      onSnapshot(logsCol, (snap) => {
+        const list = document.getElementById("logsList");
+        document.getElementById("totalLogsCount").innerText = snap.size;
+        if (snap.empty) {
+          list.innerHTML = '<p class="muted">No transactions yet.</p>';
+          return;
+        }
+        list.innerHTML = "";
+        snap.forEach((d) => {
+          const l = d.data();
+          const bClass = l.type === "OUT" ? "badge-out" : "badge-in";
+          list.innerHTML += `
+            <div class="stock-row">
+              <div>
+                <span class="badge ${bClass}">${l.type}</span> <strong>${l.name}</strong>
+                <div class="muted">${l.site || "General"} • By ${l.by}</div>
+              </div>
+              <strong>${l.qty} ${l.unit}</strong>
+            </div>`;
+        });
+      });
+    }
+
+    window.submitStockEntry = async function() {
+      const type = document.getElementById("entryType").value;
+      const name = document.getElementById("itemNameInput").value.trim();
+      const qty = parseFloat(document.getElementById("itemQtyInput").value);
+      const unit = document.getElementById("itemUnitInput").value.trim() || "Pcs";
+      const site = document.getElementById("siteNameInput").value.trim() || "Godown";
+
+      if (!name || isNaN(qty) || qty <= 0) return alert("Enter valid Material Name and Quantity.");
+      const itemId = name.toLowerCase().replace(/[^a-z0-9]/g, "_");
+      const itemRef = doc(db, "saas_companies", currentUser.companyId, "stock", itemId);
+      const itemSnap = await getDoc(itemRef);
+
+      let currentQty = itemSnap.exists() ? (itemSnap.data().qty || 0) : 0;
+      const newQty = type === "OUT" ? Math.max(0, currentQty - qty) : currentQty + qty;
+
+      await setDoc(itemRef, { name, qty: newQty, unit, updatedAt: Date.now() }, { merge: true });
+      await addDoc(collection(db, "saas_companies", currentUser.companyId, "logs"), {
+        type, name, qty, unit, site, by: currentUser.userName, time: Date.now()
+      });
+
+      if (companyData.sheetUrl) {
+        fetch(companyData.sheetUrl, {
+          method: "POST",
+          mode: "no-cors",
+          body: JSON.stringify({ action: "LOG_ENTRY", type, name, qty, unit, site, by: currentUser.userName, balance: newQty })
+        });
+      }
+
+      document.getElementById("itemNameInput").value = "";
+      document.getElementById("itemQtyInput").value = "";
+      alert("Saved Successfully!");
+      switchTab("stockTab", document.querySelector(".tab-btn"));
+    };
+
+    window.saveClientSheetUrl = async function() {
+      const url = document.getElementById("clientSheetUrlInput").value.trim();
+      await updateDoc(doc(db, "saas_companies", current
