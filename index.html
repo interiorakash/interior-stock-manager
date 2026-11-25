@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Interior Stock</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background: #f1f5f9; color: #0f172a; padding-bottom: 70px; }
@@ -17,14 +19,12 @@
     .btn { width: 100%; padding: 13px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
     .btn-primary { background: #0284c7; color: #fff; }
     .btn-success { background: #16a34a; color: #fff; }
-    .btn-danger { background: #dc2626; color: #fff; }
     .btn-outline { background: #f8fafc; color: #0f172a; border: 1px solid #cbd5e1; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
     .stat-box { background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; }
     .stat-box h3 { font-size: 20px; color: #0284c7; }
     .stat-box p { font-size: 12px; color: #64748b; }
     .stock-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
-    .stock-row:last-child { border-bottom: none; }
     .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
     .badge-in { background: #dcfce7; color: #166534; }
     .badge-out { background: #fee2e2; color: #991b1b; }
@@ -37,6 +37,7 @@
     .utr-tick { position: absolute; right: 12px; top: 12px; color: #16a34a; font-weight: 700; font-size: 14px; display: none; }
     .banner-warn { background: #fef3c7; color: #92400e; padding: 10px 14px; font-size: 12px; font-weight: 600; text-align: center; }
     .muted { color: #64748b; font-size: 12px; line-height: 1.5; }
+    #statusMsg { margin-top: 10px; font-size: 13px; font-weight: 600; color: #0284c7; text-align: center; }
   </style>
 </head>
 <body>
@@ -63,7 +64,8 @@
         <option value="admin">Role: Company Owner / Admin</option>
         <option value="supervisor">Role: Site Supervisor</option>
       </select>
-      <button class="btn btn-primary" onclick="handleLogin()">Continue to Workspace</button>
+      <button type="button" id="loginBtn" class="btn btn-primary" onclick="handleLogin()">Continue to Workspace</button>
+      <div id="statusMsg"></div>
     </div>
   </div>
 
@@ -85,22 +87,21 @@
           <input type="number" id="utrInput" placeholder="Enter 12-Digit UPI UTR Number" oninput="validateUtrLive()">
           <span id="utrGreenTick" class="utr-tick">✓ Valid UTR</span>
         </div>
-        <button class="btn btn-success" onclick="submitRenewalUtr()">Verify UTR & Unlock Instantly</button>
+        <button type="button" class="btn btn-success" onclick="submitRenewalUtr()">Verify UTR & Unlock Instantly</button>
       </div>
-      <button class="btn btn-outline" style="margin-top:10px;" onclick="logoutUser()">Switch Account</button>
+      <button type="button" class="btn btn-outline" style="margin-top:10px;" onclick="logoutUser()">Switch Account</button>
     </div>
   </div>
 
   <!-- 3. Main Workspace App -->
   <div id="appScreen" class="container" style="display:none;">
     <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab('stockTab', this)">📦 Stock</button>
-      <button class="tab-btn" onclick="switchTab('entryTab', this)">➕ Entry</button>
-      <button class="tab-btn" onclick="switchTab('logsTab', this)">📋 Logs</button>
-      <button class="tab-btn" id="adminTabBtn" onclick="switchTab('settingsTab', this)">⚙️ Sheet Sync</button>
+      <button type="button" class="tab-btn active" onclick="switchTab('stockTab', this)">📦 Stock</button>
+      <button type="button" class="tab-btn" onclick="switchTab('entryTab', this)">➕ Entry</button>
+      <button type="button" class="tab-btn" onclick="switchTab('logsTab', this)">📋 Logs</button>
+      <button type="button" class="tab-btn" id="adminTabBtn" onclick="switchTab('settingsTab', this)">⚙️ Sheet Sync</button>
     </div>
 
-    <!-- Stock Summary Tab -->
     <div id="stockTab">
       <div class="grid-2">
         <div class="stat-box"><h3 id="totalItemsCount">0</h3><p>Total Materials</p></div>
@@ -109,13 +110,12 @@
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <h2 style="border:none; margin:0; padding:0;">Live Inventory</h2>
-          <button class="btn-outline" style="width:auto; padding:5px 10px; font-size:12px;" onclick="syncFromGoogleSheet()">🔄 Sync Sheet</button>
+          <button type="button" class="btn-outline" style="width:auto; padding:5px 10px; font-size:12px;" onclick="syncFromGoogleSheet()">🔄 Sync Sheet</button>
         </div>
         <div id="stockList"><p class="muted">No stock items yet.</p></div>
       </div>
     </div>
 
-    <!-- Stock In / Out Entry Tab -->
     <div id="entryTab" style="display:none;">
       <div class="card">
         <h2>➕ Stock In / Out Entry</h2>
@@ -128,11 +128,10 @@
         <input type="number" id="itemQtyInput" placeholder="Quantity">
         <input type="text" id="itemUnitInput" placeholder="Unit (e.g., Sheets, Pcs, Box)">
         <input type="text" id="siteNameInput" placeholder="Site Name / Remarks">
-        <button class="btn btn-primary" onclick="submitStockEntry()">Save Transaction</button>
+        <button type="button" class="btn btn-primary" onclick="submitStockEntry()">Save Transaction</button>
       </div>
     </div>
 
-    <!-- Transaction Logs Tab -->
     <div id="logsTab" style="display:none;">
       <div class="card">
         <h2>📋 Recent Movements</h2>
@@ -140,21 +139,17 @@
       </div>
     </div>
 
-    <!-- Client Private Google Sheet Setup (Admin Only) -->
     <div id="settingsTab" style="display:none;">
       <div class="card">
         <h2>🔗 Your Private Google Sheet (Two-Way Sync)</h2>
         <p class="muted" style="margin-bottom:10px;">Connect your own Google Sheet Web App URL. Only you have access to your sheet. Any manual edit you make in your Google Sheet will sync back here.</p>
         <input type="url" id="clientSheetUrlInput" placeholder="Paste your Google Apps Script URL">
-        <button class="btn btn-primary" onclick="saveClientSheetUrl()">Save & Sync My Sheet</button>
+        <button type="button" class="btn btn-primary" onclick="saveClientSheetUrl()">Save & Sync My Sheet</button>
       </div>
     </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBW8ZkJEjAjHh8CDJ3yJvcRYwQRhHBkkH4",
       authDomain: "interior-stock-app-c7a1f.firebaseapp.com",
@@ -164,59 +159,91 @@
       appId: "1:353218241112:web:5c8ae04253ea372d41e02d"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     let currentUser = JSON.parse(localStorage.getItem("is_user") || "null");
     let masterConfig = {};
     let companyData = {};
 
     async function loadMasterConfig() {
-      const snap = await getDoc(doc(db, "saas_config", "master"));
-      if (snap.exists()) masterConfig = snap.data();
+      try {
+        const snap = await db.collection("saas_config").doc("master").get();
+        if (snap.exists) masterConfig = snap.data();
+      } catch (e) { console.log(e); }
     }
 
-    window.handleLogin = async function() {
-      const companyName = document.getElementById("companyNameInput").value.trim();
-      const userName = document.getElementById("userNameInput").value.trim();
-      const email = document.getElementById("companyEmailInput").value.trim().toLowerCase();
-      const role = document.getElementById("userRoleInput").value;
+    async function handleLogin() {
+      const statusEl = document.getElementById("statusMsg");
+      const btn = document.getElementById("loginBtn");
+      try {
+        const companyName = document.getElementById("companyNameInput").value.trim();
+        const userName = document.getElementById("userNameInput").value.trim();
+        const email = document.getElementById("companyEmailInput").value.trim().toLowerCase();
+        const role = document.getElementById("userRoleInput").value;
 
-      if (!email || !userName) return alert("Please enter your Name and Company Email.");
-      const companyId = email.replace(/[^a-z0-9]/g, "_");
-      const compRef = doc(db, "saas_companies", companyId);
-      const compSnap = await getDoc(compRef);
+        if (!email || !userName) {
+          alert("Please enter your Name and Company Email.");
+          return;
+        }
 
-      if (!compSnap.exists()) {
-        if (!companyName) return alert("New company registration requires Company Name.");
-        const vCode = Math.floor(100000 + Math.random() * 900000);
-        await setDoc(compRef, {
-          companyName,
-          adminEmail: email,
-          status: "pending",
-          verificationCode: vCode,
-          createdAt: Date.now(),
-          expiryTime: 0
-        });
-        await loadMasterConfig();
-        if (masterConfig.masterEmailScript) {
-          fetch(masterConfig.masterEmailScript, {
+        btn.disabled = true;
+        btn.innerText = "Connecting...";
+        statusEl.innerText = "Connecting to server...";
+
+        const companyId = email.replace(/[^a-z0-9]/g, "_");
+        const compRef = db.collection("saas_companies").doc(companyId);
+        const compSnap = await compRef.get();
+
+        if (!compSnap.exists) {
+          if (!companyName) {
+            btn.disabled = false;
+            btn.innerText = "Continue to Workspace";
+            statusEl.innerText = "";
+            alert("New company registration requires Company Name.");
+            return;
+          }
+          const vCode = Math.floor(100000 + Math.random() * 900000);
+          await compRef.set({
+            companyName: companyName,
+            adminEmail: email,
+            status: "pending",
+            verificationCode: vCode,
+            createdAt: Date.now(),
+            expiryTime: 0
+          });
+          await loadMasterConfig();
+          const scriptUrl = masterConfig.masterEmailScript || "https://script.google.com/macros/s/AKfycbxNpcZCMiSAUZupBmKZYt_eAIX2q7hVQx-b31Cib7PYwnF-MzI2lwQdZCQFUqKmINylyg/exec";
+          fetch(scriptUrl, {
             method: "POST",
             mode: "no-cors",
             body: JSON.stringify({
               action: "NEW_COMPANY_REQUEST",
-              companyName,
+              companyName: companyName,
               adminName: userName,
               adminEmail: email,
               verificationCode: vCode
             })
           });
         }
-      }
 
-      currentUser = { companyId, companyName: compSnap.exists() ? compSnap.data().companyName : companyName, userName, email, role };
-      localStorage.setItem("is_user", JSON.stringify(currentUser));
-      initWorkspace();
-    };
+        currentUser = {
+          companyId: companyId,
+          companyName: compSnap.exists ? compSnap.data().companyName : companyName,
+          userName: userName,
+          email: email,
+          role: role
+        };
+        localStorage.setItem("is_user", JSON.stringify(currentUser));
+        initWorkspace();
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerText = "Continue to Workspace";
+        statusEl.style.color = "#dc2626";
+        statusEl.innerText = "Error: " + err.message;
+        alert("Login Error: " + err.message);
+      }
+    }
 
     async function initWorkspace() {
       if (!currentUser) return;
@@ -224,11 +251,11 @@
       document.getElementById("authScreen").style.display = "none";
       document.getElementById("logoutBtn").style.display = "block";
       document.getElementById("brandTitle").innerText = currentUser.companyName || "Interior Stock";
-      document.getElementById("subTitle").innerText = `${currentUser.userName} (${currentUser.role.toUpperCase()})`;
+      document.getElementById("subTitle").innerText = currentUser.userName + " (" + currentUser.role.toUpperCase() + ")";
       if (currentUser.role !== "admin") document.getElementById("adminTabBtn").style.display = "none";
 
-      onSnapshot(doc(db, "saas_companies", currentUser.companyId), (snap) => {
-        if (!snap.exists()) return;
+      db.collection("saas_companies").doc(currentUser.companyId).onSnapshot((snap) => {
+        if (!snap.exists) return;
         companyData = snap.data();
         const now = Date.now();
         const isExpired = companyData.expiryTime && now > companyData.expiryTime;
@@ -237,7 +264,7 @@
           document.getElementById("appScreen").style.display = "none";
           document.getElementById("lockScreen").style.display = "flex";
           document.getElementById("lockTitle").innerText = "⏳ Approval Pending";
-          document.getElementById("lockDesc").innerText = `Request sent to Master Owner for ${companyData.companyName}. Once approved, this screen will unlock automatically.`;
+          document.getElementById("lockDesc").innerText = "Request sent to Master Owner for " + companyData.companyName + ". Once approved, this screen will unlock automatically.";
           document.getElementById("renewalSection").style.display = "none";
         } else if (companyData.status === "locked" || isExpired) {
           document.getElementById("appScreen").style.display = "none";
@@ -255,7 +282,7 @@
           const banner = document.getElementById("expiryBanner");
           if (daysLeft <= 5 && daysLeft > 0) {
             banner.style.display = "block";
-            banner.innerText = `⚠️ Plan expires in ${daysLeft} day(s). Renew soon to avoid interruption.`;
+            banner.innerText = "⚠️ Plan expires in " + daysLeft + " day(s). Renew soon to avoid interruption.";
           } else {
             banner.style.display = "none";
           }
@@ -264,54 +291,52 @@
       });
     }
 
-    window.validateUtrLive = function() {
+    function validateUtrLive() {
       const val = document.getElementById("utrInput").value.trim();
       const tick = document.getElementById("utrGreenTick");
       tick.style.display = /^\d{12}$/.test(val) ? "inline" : "none";
-    };
+    }
 
-    window.submitRenewalUtr = async function() {
+    async function submitRenewalUtr() {
       const utr = document.getElementById("utrInput").value.trim();
       const plan = document.getElementById("planSelect").value;
       if (!/^\d{12}$/.test(utr)) return alert("Please enter a valid 12-digit numeric UTR number.");
 
-      const utrRef = doc(db, "used_utrs", utr);
-      const utrSnap = await getDoc(utrRef);
-      if (utrSnap.exists()) return alert("This UTR number has already been used!");
+      const utrRef = db.collection("used_utrs").doc(utr);
+      const utrSnap = await utrRef.get();
+      if (utrSnap.exists) return alert("This UTR number has already been used!");
 
       let days = 30;
       if (plan.includes("6 Months")) days = 180;
       if (plan.includes("1 Year")) days = 365;
 
       const newExpiry = Date.now() + (days * 24 * 60 * 60 * 1000);
-      await setDoc(utrRef, { companyId: currentUser.companyId, usedAt: Date.now() });
-      await updateDoc(doc(db, "saas_companies", currentUser.companyId), {
+      await utrRef.set({ companyId: currentUser.companyId, usedAt: Date.now() });
+      await db.collection("saas_companies").doc(currentUser.companyId).update({
         status: "active",
         expiryTime: newExpiry,
         lastUtr: utr,
         lastPlan: plan
       });
 
-      if (masterConfig.masterEmailScript) {
-        fetch(masterConfig.masterEmailScript, {
-          method: "POST",
-          mode: "no-cors",
-          body: JSON.stringify({
-            action: "RENEWAL_PAYMENT_ALERT",
-            companyName: companyData.companyName,
-            adminEmail: companyData.adminEmail,
-            planName: plan,
-            utr: utr,
-            newExpiry: new Date(newExpiry).toLocaleDateString("en-IN")
-          })
-        });
-      }
+      const scriptUrl = masterConfig.masterEmailScript || "https://script.google.com/macros/s/AKfycbxNpcZCMiSAUZupBmKZYt_eAIX2q7hVQx-b31Cib7PYwnF-MzI2lwQdZCQFUqKmINylyg/exec";
+      fetch(scriptUrl, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify({
+          action: "RENEWAL_PAYMENT_ALERT",
+          companyName: companyData.companyName,
+          adminEmail: companyData.adminEmail,
+          planName: plan,
+          utr: utr,
+          newExpiry: new Date(newExpiry).toLocaleDateString("en-IN")
+        })
+      });
       alert("UTR Verified! Your app is unlocked instantly.");
-    };
+    }
 
     function listenCompanyStock() {
-      const stockCol = collection(db, "saas_companies", currentUser.companyId, "stock");
-      onSnapshot(stockCol, (snap) => {
+      db.collection("saas_companies").doc(currentUser.companyId).collection("stock").onSnapshot((snap) => {
         const list = document.getElementById("stockList");
         document.getElementById("totalItemsCount").innerText = snap.size;
         if (snap.empty) {
@@ -321,16 +346,11 @@
         list.innerHTML = "";
         snap.forEach((d) => {
           const item = d.data();
-          list.innerHTML += `
-            <div class="stock-row">
-              <div><strong>${item.name}</strong><div class="muted">Unit: ${item.unit || "Pcs"}</div></div>
-              <div style="font-size:16px; font-weight:700; color:#0284c7;">${item.qty}</div>
-            </div>`;
+          list.innerHTML += '<div class="stock-row"><div><strong>' + item.name + '</strong><div class="muted">Unit: ' + (item.unit || "Pcs") + '</div></div><div style="font-size:16px; font-weight:700; color:#0284c7;">' + item.qty + '</div></div>';
         });
       });
 
-      const logsCol = query(collection(db, "saas_companies", currentUser.companyId, "logs"), orderBy("time", "desc"), limit(20));
-      onSnapshot(logsCol, (snap) => {
+      db.collection("saas_companies").doc(currentUser.companyId).collection("logs").orderBy("time", "desc").limit(20).onSnapshot((snap) => {
         const list = document.getElementById("logsList");
         document.getElementById("totalLogsCount").innerText = snap.size;
         if (snap.empty) {
@@ -341,19 +361,12 @@
         snap.forEach((d) => {
           const l = d.data();
           const bClass = l.type === "OUT" ? "badge-out" : "badge-in";
-          list.innerHTML += `
-            <div class="stock-row">
-              <div>
-                <span class="badge ${bClass}">${l.type}</span> <strong>${l.name}</strong>
-                <div class="muted">${l.site || "General"} • By ${l.by}</div>
-              </div>
-              <strong>${l.qty} ${l.unit}</strong>
-            </div>`;
+          list.innerHTML += '<div class="stock-row"><div><span class="badge ' + bClass + '">' + l.type + '</span> <strong>' + l.name + '</strong><div class="muted">' + (l.site || "General") + ' • By ' + l.by + '</div></div><strong>' + l.qty + ' ' + l.unit + '</strong></div>';
         });
       });
     }
 
-    window.submitStockEntry = async function() {
+    async function submitStockEntry() {
       const type = document.getElementById("entryType").value;
       const name = document.getElementById("itemNameInput").value.trim();
       const qty = parseFloat(document.getElementById("itemQtyInput").value);
@@ -362,31 +375,10 @@
 
       if (!name || isNaN(qty) || qty <= 0) return alert("Enter valid Material Name and Quantity.");
       const itemId = name.toLowerCase().replace(/[^a-z0-9]/g, "_");
-      const itemRef = doc(db, "saas_companies", currentUser.companyId, "stock", itemId);
-      const itemSnap = await getDoc(itemRef);
+      const itemRef = db.collection("saas_companies").doc(currentUser.companyId).collection("stock").doc(itemId);
+      const itemSnap = await itemRef.get();
 
-      let currentQty = itemSnap.exists() ? (itemSnap.data().qty || 0) : 0;
+      let currentQty = itemSnap.exists ? (itemSnap.data().qty || 0) : 0;
       const newQty = type === "OUT" ? Math.max(0, currentQty - qty) : currentQty + qty;
 
-      await setDoc(itemRef, { name, qty: newQty, unit, updatedAt: Date.now() }, { merge: true });
-      await addDoc(collection(db, "saas_companies", currentUser.companyId, "logs"), {
-        type, name, qty, unit, site, by: currentUser.userName, time: Date.now()
-      });
-
-      if (companyData.sheetUrl) {
-        fetch(companyData.sheetUrl, {
-          method: "POST",
-          mode: "no-cors",
-          body: JSON.stringify({ action: "LOG_ENTRY", type, name, qty, unit, site, by: currentUser.userName, balance: newQty })
-        });
-      }
-
-      document.getElementById("itemNameInput").value = "";
-      document.getElementById("itemQtyInput").value = "";
-      alert("Saved Successfully!");
-      switchTab("stockTab", document.querySelector(".tab-btn"));
-    };
-
-    window.saveClientSheetUrl = async function() {
-      const url = document.getElementById("clientSheetUrlInput").value.trim();
-      await updateDoc(doc(db, "saas_companies", current
+      await itemRef.set({ name: name, qty: newQty, unit: unit, updatedAt
