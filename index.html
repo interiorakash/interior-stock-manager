@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Interior Stock</title>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background: #f1f5f9; color: #0f172a; padding-bottom: 70px; }
@@ -74,6 +72,7 @@
     <div class="overlay-box">
       <h2 id="lockTitle" style="margin-bottom:8px; color:#dc2626;">⏳ Approval Pending</h2>
       <p id="lockDesc" class="muted" style="margin-bottom:14px;">Your registration request has been sent to the Master Owner. Please wait for approval.</p>
+      <button type="button" class="btn btn-primary" style="margin-bottom:10px;" onclick="checkStatusNow()">🔄 Check Approval Status</button>
       
       <div id="renewalSection" style="display:none; border-top:1px solid #e2e8f0; padding-top:12px;">
         <p style="font-size:13px; font-weight:600; margin-bottom:6px;">Instant Renewal (Zero Data Loss)</p>
@@ -110,7 +109,7 @@
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <h2 style="border:none; margin:0; padding:0;">Live Inventory</h2>
-          <button type="button" class="btn-outline" style="width:auto; padding:5px 10px; font-size:12px;" onclick="syncFromGoogleSheet()">🔄 Sync Sheet</button>
+          <button type="button" class="btn-outline" style="width:auto; padding:5px 10px; font-size:12px;" onclick="loadCompanyData()">🔄 Refresh</button>
         </div>
         <div id="stockList"><p class="muted">No stock items yet.</p></div>
       </div>
@@ -128,7 +127,7 @@
         <input type="number" id="itemQtyInput" placeholder="Quantity">
         <input type="text" id="itemUnitInput" placeholder="Unit (e.g., Sheets, Pcs, Box)">
         <input type="text" id="siteNameInput" placeholder="Site Name / Remarks">
-        <button type="button" class="btn btn-primary" onclick="submitStockEntry()">Save Transaction</button>
+        <button type="button" id="saveEntryBtn" class="btn btn-primary" onclick="submitStockEntry()">Save Transaction</button>
       </div>
     </div>
 
@@ -142,7 +141,7 @@
     <div id="settingsTab" style="display:none;">
       <div class="card">
         <h2>🔗 Your Private Google Sheet (Two-Way Sync)</h2>
-        <p class="muted" style="margin-bottom:10px;">Connect your own Google Sheet Web App URL. Only you have access to your sheet. Any manual edit you make in your Google Sheet will sync back here.</p>
+        <p class="muted" style="margin-bottom:10px;">Connect your own Google Sheet Web App URL. Only you have access to your sheet.</p>
         <input type="url" id="clientSheetUrlInput" placeholder="Paste your Google Apps Script URL">
         <button type="button" class="btn btn-primary" onclick="saveClientSheetUrl()">Save & Sync My Sheet</button>
       </div>
@@ -150,61 +149,92 @@
   </div>
 
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBW8ZkJEjAjHh8CDJ3yJvcRYwQRhHBkkH4",
-      authDomain: "interior-stock-app-c7a1f.firebaseapp.com",
-      projectId: "interior-stock-app-c7a1f",
-      storageBucket: "interior-stock-app-c7a1f.firebasestorage.app",
-      messagingSenderId: "353218241112",
-      appId: "1:353218241112:web:5c8ae04253ea372d41e02d"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    const PROJECT_ID = "interior-stock-app-c7a1f";
+    const BASE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+    const DEFAULT_SCRIPT = "https://script.google.com/macros/s/AKfycbxNpcZCMiSAUZupBmKZYt_eAIX2q7hVQx-b31Cib7PYwnF-MzI2lwQdZCQFUqKmINylyg/exec";
 
     let currentUser = JSON.parse(localStorage.getItem("is_user") || "null");
     let masterConfig = {};
     let companyData = {};
 
-    async function loadMasterConfig() {
-      try {
-        const snap = await db.collection("saas_config").doc("master").get();
-        if (snap.exists) masterConfig = snap.data();
-      } catch (e) { console.log(e); }
+    // Firestore REST Helpers
+    function toFsFields(obj) {
+      const fields = {};
+      for (const [k, v] of Object.entries(obj)) {
+        if (typeof v === "number") fields[k] = Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+        else fields[k] = { stringValue: String(v ?? "") };
+      }
+      return { fields };
+    }
+
+    function fromFsDoc(doc) {
+      if (!doc || !doc.fields) return null;
+      const obj = {};
+      for (const [k, v] of Object.entries(doc.fields)) {
+        if (v.stringValue !== undefined) obj[k] = v.stringValue;
+        else if (v.integerValue !== undefined) obj[k] = Number(v.integerValue);
+        else if (v.doubleValue !== undefined) obj[k] = Number(v.doubleValue);
+      }
+      return obj;
+    }
+
+    async function fsGet(path) {
+      const res = await fetch(`${BASE_URL}/${path}`);
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error("Server error (" + res.status + ")");
+      return fromFsDoc(await res.json());
+    }
+
+    async function fsSet(path, data) {
+      const res = await fetch(`${BASE_URL}/${path}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(toFsFields(data))
+      });
+      if (!res.ok) throw new Error("Save failed (" + res.status + ")");
+      return fromFsDoc(await res.json());
+    }
+
+    async function fsList(path) {
+      const res = await fetch(`${BASE_URL}/${path}?pageSize=50`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.documents || []).map(d => ({ id: d.name.split("/").pop(), ...fromFsDoc(d) }));
     }
 
     async function handleLogin() {
       const statusEl = document.getElementById("statusMsg");
       const btn = document.getElementById("loginBtn");
+      const companyName = document.getElementById("companyNameInput").value.trim();
+      const userName = document.getElementById("userNameInput").value.trim();
+      const email = document.getElementById("companyEmailInput").value.trim().toLowerCase();
+      const role = document.getElementById("userRoleInput").value;
+
+      if (!email || !userName) {
+        statusEl.style.color = "#dc2626";
+        statusEl.innerText = "Please enter Your Name and Company Email.";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = "Connecting...";
+      statusEl.style.color = "#0284c7";
+      statusEl.innerText = "Checking workspace...";
+
       try {
-        const companyName = document.getElementById("companyNameInput").value.trim();
-        const userName = document.getElementById("userNameInput").value.trim();
-        const email = document.getElementById("companyEmailInput").value.trim().toLowerCase();
-        const role = document.getElementById("userRoleInput").value;
-
-        if (!email || !userName) {
-          alert("Please enter your Name and Company Email.");
-          return;
-        }
-
-        btn.disabled = true;
-        btn.innerText = "Connecting...";
-        statusEl.innerText = "Connecting to server...";
-
         const companyId = email.replace(/[^a-z0-9]/g, "_");
-        const compRef = db.collection("saas_companies").doc(companyId);
-        const compSnap = await compRef.get();
+        let existing = await fsGet(`saas_companies/${companyId}`);
 
-        if (!compSnap.exists) {
+        if (!existing) {
           if (!companyName) {
             btn.disabled = false;
             btn.innerText = "Continue to Workspace";
-            statusEl.innerText = "";
-            alert("New company registration requires Company Name.");
+            statusEl.style.color = "#dc2626";
+            statusEl.innerText = "New company requires Company Name.";
             return;
           }
           const vCode = Math.floor(100000 + Math.random() * 900000);
-          await compRef.set({
+          existing = await fsSet(`saas_companies/${companyId}`, {
             companyName: companyName,
             adminEmail: email,
             status: "pending",
@@ -212,8 +242,9 @@
             createdAt: Date.now(),
             expiryTime: 0
           });
-          await loadMasterConfig();
-          const scriptUrl = masterConfig.masterEmailScript || "https://script.google.com/macros/s/AKfycbxNpcZCMiSAUZupBmKZYt_eAIX2q7hVQx-b31Cib7PYwnF-MzI2lwQdZCQFUqKmINylyg/exec";
+
+          const mCfg = await fsGet("saas_config/master");
+          const scriptUrl = (mCfg && mCfg.masterEmailScript) ? mCfg.masterEmailScript : DEFAULT_SCRIPT;
           fetch(scriptUrl, {
             method: "POST",
             mode: "no-cors",
@@ -224,12 +255,12 @@
               adminEmail: email,
               verificationCode: vCode
             })
-          });
+          }).catch(() => {});
         }
 
         currentUser = {
           companyId: companyId,
-          companyName: compSnap.exists ? compSnap.data().companyName : companyName,
+          companyName: existing.companyName || companyName,
           userName: userName,
           email: email,
           role: role
@@ -241,22 +272,25 @@
         btn.innerText = "Continue to Workspace";
         statusEl.style.color = "#dc2626";
         statusEl.innerText = "Error: " + err.message;
-        alert("Login Error: " + err.message);
       }
     }
 
     async function initWorkspace() {
       if (!currentUser) return;
-      await loadMasterConfig();
       document.getElementById("authScreen").style.display = "none";
       document.getElementById("logoutBtn").style.display = "block";
       document.getElementById("brandTitle").innerText = currentUser.companyName || "Interior Stock";
-      document.getElementById("subTitle").innerText = currentUser.userName + " (" + currentUser.role.toUpperCase() + ")";
+      document.getElementById("subTitle").innerText = `${currentUser.userName} (${currentUser.role.toUpperCase()})`;
       if (currentUser.role !== "admin") document.getElementById("adminTabBtn").style.display = "none";
+      await checkStatusNow();
+    }
 
-      db.collection("saas_companies").doc(currentUser.companyId).onSnapshot((snap) => {
-        if (!snap.exists) return;
-        companyData = snap.data();
+    async function checkStatusNow() {
+      try {
+        masterConfig = (await fsGet("saas_config/master")) || {};
+        companyData = await fsGet(`saas_companies/${currentUser.companyId}`);
+        if (!companyData) return logoutUser();
+
         const now = Date.now();
         const isExpired = companyData.expiryTime && now > companyData.expiryTime;
 
@@ -264,62 +298,63 @@
           document.getElementById("appScreen").style.display = "none";
           document.getElementById("lockScreen").style.display = "flex";
           document.getElementById("lockTitle").innerText = "⏳ Approval Pending";
-          document.getElementById("lockDesc").innerText = "Request sent to Master Owner for " + companyData.companyName + ". Once approved, this screen will unlock automatically.";
+          document.getElementById("lockDesc").innerText = `Request sent to Master Owner for ${companyData.companyName}. Tap "Check Approval Status" after approval.`;
           document.getElementById("renewalSection").style.display = "none";
         } else if (companyData.status === "locked" || isExpired) {
           document.getElementById("appScreen").style.display = "none";
           document.getElementById("lockScreen").style.display = "flex";
           document.getElementById("lockTitle").innerText = "🔒 Subscription Expired";
-          document.getElementById("lockDesc").innerText = "Your plan has expired. Enter your 12-digit UPI UTR number below to unlock instantly without losing any data.";
+          document.getElementById("lockDesc").innerText = "Enter your 12-digit UPI UTR number below to unlock instantly without losing any data.";
           document.getElementById("renewalSection").style.display = "block";
           document.getElementById("displayUpi").innerText = masterConfig.upiId || "Ask Owner for UPI ID";
         } else {
           document.getElementById("lockScreen").style.display = "none";
           document.getElementById("appScreen").style.display = "block";
           if (companyData.sheetUrl) document.getElementById("clientSheetUrlInput").value = companyData.sheetUrl;
-          
+
           const daysLeft = Math.ceil((companyData.expiryTime - now) / (1000 * 60 * 60 * 24));
           const banner = document.getElementById("expiryBanner");
           if (daysLeft <= 5 && daysLeft > 0) {
             banner.style.display = "block";
-            banner.innerText = "⚠️ Plan expires in " + daysLeft + " day(s). Renew soon to avoid interruption.";
+            banner.innerText = `⚠️ Plan expires in ${daysLeft} day(s). Renew soon to avoid interruption.`;
           } else {
             banner.style.display = "none";
           }
-          listenCompanyStock();
+          loadCompanyData();
         }
-      });
+      } catch (e) {
+        alert("Connection error: " + e.message);
+      }
     }
 
     function validateUtrLive() {
       const val = document.getElementById("utrInput").value.trim();
-      const tick = document.getElementById("utrGreenTick");
-      tick.style.display = /^\d{12}$/.test(val) ? "inline" : "none";
+      document.getElementById("utrGreenTick").style.display = /^\d{12}$/.test(val) ? "inline" : "none";
     }
 
     async function submitRenewalUtr() {
       const utr = document.getElementById("utrInput").value.trim();
       const plan = document.getElementById("planSelect").value;
-      if (!/^\d{12}$/.test(utr)) return alert("Please enter a valid 12-digit numeric UTR number.");
+      if (!/^\d{12}$/.test(utr)) return alert("Enter a valid 12-digit numeric UTR.");
 
-      const utrRef = db.collection("used_utrs").doc(utr);
-      const utrSnap = await utrRef.get();
-      if (utrSnap.exists) return alert("This UTR number has already been used!");
+      const existingUtr = await fsGet(`used_utrs/${utr}`);
+      if (existingUtr) return alert("This UTR number has already been used!");
 
       let days = 30;
       if (plan.includes("6 Months")) days = 180;
       if (plan.includes("1 Year")) days = 365;
 
       const newExpiry = Date.now() + (days * 24 * 60 * 60 * 1000);
-      await utrRef.set({ companyId: currentUser.companyId, usedAt: Date.now() });
-      await db.collection("saas_companies").doc(currentUser.companyId).update({
+      await fsSet(`used_utrs/${utr}`, { companyId: currentUser.companyId, usedAt: Date.now() });
+      await fsSet(`saas_companies/${currentUser.companyId}`, {
+        ...companyData,
         status: "active",
         expiryTime: newExpiry,
         lastUtr: utr,
         lastPlan: plan
       });
 
-      const scriptUrl = masterConfig.masterEmailScript || "https://script.google.com/macros/s/AKfycbxNpcZCMiSAUZupBmKZYt_eAIX2q7hVQx-b31Cib7PYwnF-MzI2lwQdZCQFUqKmINylyg/exec";
+      const scriptUrl = masterConfig.masterEmailScript || DEFAULT_SCRIPT;
       fetch(scriptUrl, {
         method: "POST",
         mode: "no-cors",
@@ -331,54 +366,42 @@
           utr: utr,
           newExpiry: new Date(newExpiry).toLocaleDateString("en-IN")
         })
-      });
-      alert("UTR Verified! Your app is unlocked instantly.");
+      }).catch(() => {});
+      alert("UTR Verified! Unlocked instantly.");
+      checkStatusNow();
     }
 
-    function listenCompanyStock() {
-      db.collection("saas_companies").doc(currentUser.companyId).collection("stock").onSnapshot((snap) => {
-        const list = document.getElementById("stockList");
-        document.getElementById("totalItemsCount").innerText = snap.size;
-        if (snap.empty) {
-          list.innerHTML = '<p class="muted">No stock items yet. Add from Entry tab or Sync Sheet.</p>';
-          return;
-        }
-        list.innerHTML = "";
-        snap.forEach((d) => {
-          const item = d.data();
-          list.innerHTML += '<div class="stock-row"><div><strong>' + item.name + '</strong><div class="muted">Unit: ' + (item.unit || "Pcs") + '</div></div><div style="font-size:16px; font-weight:700; color:#0284c7;">' + item.qty + '</div></div>';
-        });
-      });
+    async function loadCompanyData() {
+      const stocks = await fsList(`saas_companies/${currentUser.companyId}/stock`);
+      const sList = document.getElementById("stockList");
+      document.getElementById("totalItemsCount").innerText = stocks.length;
+      if (stocks.length === 0) {
+        sList.innerHTML = '<p class="muted">No stock items yet. Add from Entry tab.</p>';
+      } else {
+        sList.innerHTML = stocks.map(item => `
+          <div class="stock-row">
+            <div><strong>${item.name}</strong><div class="muted">Unit: ${item.unit || "Pcs"}</div></div>
+            <div style="font-size:16px; font-weight:700; color:#0284c7;">${item.qty}</div>
+          </div>`).join("");
+      }
 
-      db.collection("saas_companies").doc(currentUser.companyId).collection("logs").orderBy("time", "desc").limit(20).onSnapshot((snap) => {
-        const list = document.getElementById("logsList");
-        document.getElementById("totalLogsCount").innerText = snap.size;
-        if (snap.empty) {
-          list.innerHTML = '<p class="muted">No transactions yet.</p>';
-          return;
-        }
-        list.innerHTML = "";
-        snap.forEach((d) => {
-          const l = d.data();
-          const bClass = l.type === "OUT" ? "badge-out" : "badge-in";
-          list.innerHTML += '<div class="stock-row"><div><span class="badge ' + bClass + '">' + l.type + '</span> <strong>' + l.name + '</strong><div class="muted">' + (l.site || "General") + ' • By ' + l.by + '</div></div><strong>' + l.qty + ' ' + l.unit + '</strong></div>';
-        });
-      });
+      const logs = await fsList(`saas_companies/${currentUser.companyId}/logs`);
+      logs.sort((a, b) => (b.time || 0) - (a.time || 0));
+      const lList = document.getElementById("logsList");
+      document.getElementById("totalLogsCount").innerText = logs.length;
+      if (logs.length === 0) {
+        lList.innerHTML = '<p class="muted">No transactions yet.</p>';
+      } else {
+        lList.innerHTML = logs.slice(0, 25).map(l => `
+          <div class="stock-row">
+            <div>
+              <span class="badge ${l.type === 'OUT' ? 'badge-out' : 'badge-in'}">${l.type}</span> <strong>${l.name}</strong>
+              <div class="muted">${l.site || "General"} • By ${l.by}</div>
+            </div>
+            <strong>${l.qty} ${l.unit}</strong>
+          </div>`).join("");
+      }
     }
 
     async function submitStockEntry() {
-      const type = document.getElementById("entryType").value;
-      const name = document.getElementById("itemNameInput").value.trim();
-      const qty = parseFloat(document.getElementById("itemQtyInput").value);
-      const unit = document.getElementById("itemUnitInput").value.trim() || "Pcs";
-      const site = document.getElementById("siteNameInput").value.trim() || "Godown";
-
-      if (!name || isNaN(qty) || qty <= 0) return alert("Enter valid Material Name and Quantity.");
-      const itemId = name.toLowerCase().replace(/[^a-z0-9]/g, "_");
-      const itemRef = db.collection("saas_companies").doc(currentUser.companyId).collection("stock").doc(itemId);
-      const itemSnap = await itemRef.get();
-
-      let currentQty = itemSnap.exists ? (itemSnap.data().qty || 0) : 0;
-      const newQty = type === "OUT" ? Math.max(0, currentQty - qty) : currentQty + qty;
-
-      await itemRef.set({ name: name, qty: newQty, unit: unit, updatedAt
+      const
