@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Interior Stock — Master Owner Control</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; padding: 16px; padding-bottom: 60px; }
+    .header { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 14px 16px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #334155; }
+    .header h1 { font-size: 18px; color: #38bdf8; }
+    .badge { background: #0284c7; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 20px; font-weight: 600; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .card h2 { font-size: 15px; margin-bottom: 12px; color: #e2e8f0; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+    input, select { width: 100%; padding: 11px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 14px; }
+    .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
+    .btn-primary { background: #0284c7; color: #fff; }
+    .btn-success { background: #16a34a; color: #fff; padding: 8px 12px; font-size: 13px; width: auto; }
+    .btn-danger { background: #dc2626; color: #fff; padding: 8px 12px; font-size: 13px; width: auto; }
+    .btn-warn { background: #d97706; color: #fff; padding: 8px 12px; font-size: 13px; width: auto; }
+    .company-item { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+    .company-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .status-active { color: #4ade80; font-weight: 700; font-size: 12px; }
+    .status-pending { color: #facc15; font-weight: 700; font-size: 12px; }
+    .status-locked { color: #f87171; font-weight: 700; font-size: 12px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .muted { color: #94a3b8; font-size: 12px; line-height: 1.5; }
+    #loginBox { max-width: 400px; margin: 60px auto; }
+  </style>
+</head>
+<body>
+
+  <!-- Owner PIN Lock Screen -->
+  <div id="loginBox" class="card">
+    <h2>🔒 Master Owner Authentication</h2>
+    <p class="muted" style="margin-bottom:12px;">Enter your secret Master PIN to control Interior Stock licenses.</p>
+    <input type="password" id="ownerPinInput" placeholder="Enter Master PIN (Default: 2026)">
+    <button class="btn btn-primary" onclick="unlockOwner()">Unlock Control Panel</button>
+  </div>
+
+  <!-- Main Owner Dashboard -->
+  <div id="dashboard" style="display:none;">
+    <div class="header">
+      <div>
+        <h1>Interior Stock</h1>
+        <div class="muted">Master SaaS Controller</div>
+      </div>
+      <span class="badge" id="totalCount">0 Companies</span>
+    </div>
+
+    <!-- Payment & Plan Settings -->
+    <div class="card">
+      <h2>⚙️ Payment & Plan Settings (Future Ready)</h2>
+      <input type="text" id="upiIdInput" placeholder="Your UPI ID (e.g., name@okicici)">
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+        <input type="number" id="price1m" placeholder="1M ₹ (e.g. 499)">
+        <input type="number" id="price6m" placeholder="6M ₹ (e.g. 2499)">
+        <input type="number" id="price1y" placeholder="1Y ₹ (e.g. 4499)">
+      </div>
+      <input type="password" id="newPinInput" placeholder="Change Master PIN (Optional)">
+      <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+    </div>
+
+    <!-- Registered Companies List -->
+    <div class="card">
+      <h2>🏢 Client Companies & Licenses</h2>
+      <div id="companyList"><p class="muted">Loading companies...</p></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBW8ZkJEjAjHh8CDJ3yJvcRYwQRhHBkkH4",
+      authDomain: "interior-stock-app-c7a1f.firebaseapp.com",
+      projectId: "interior-stock-app-c7a1f",
+      storageBucket: "interior-stock-app-c7a1f.firebasestorage.app",
+      messagingSenderId: "353218241112",
+      appId: "1:353218241112:web:5c8ae04253ea372d41e02d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    let currentPin = "2026";
+
+    async function loadSettings() {
+      const snap = await getDoc(doc(db, "saas_config", "master"));
+      if (snap.exists()) {
+        const d = snap.data();
+        if (d.masterPin) currentPin = d.masterPin;
+        document.getElementById("upiIdInput").value = d.upiId || "";
+        document.getElementById("price1m").value = d.price1m || "";
+        document.getElementById("price6m").value = d.price6m || "";
+        document.getElementById("price1y").value = d.price1y || "";
+      }
+    }
+    loadSettings();
+
+    window.unlockOwner = function() {
+      const entered = document.getElementById("ownerPinInput").value.trim();
+      if (entered === currentPin) {
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+        listenCompanies();
+      } else {
+        alert("Wrong Master PIN!");
+      }
+    };
+
+    window.saveSettings = async function() {
+      const newPin = document.getElementById("newPinInput").value.trim();
+      const payload = {
+        upiId: document.getElementById("upiIdInput").value.trim(),
+        price1m: document.getElementById("price1m").value.trim(),
+        price6m: document.getElementById("price6m").value.trim(),
+        price1y: document.getElementById("price1y").value.trim(),
+        masterPin: newPin || currentPin,
+        masterEmailScript: "https://script.google.com/macros/s/AKfycbxNpcZCMiSAUZupBmKZYt_eAIX2q7hVQx-b31Cib7PYwnF-MzI2lwQdZCQFUqKmINylyg/exec"
+      };
+      await setDoc(doc(db, "saas_config", "master"), payload, { merge: true });
+      if (newPin) currentPin = newPin;
+      alert("Master Settings Saved!");
+    };
+
+    function listenCompanies() {
+      onSnapshot(collection(db, "saas_companies"), (snapshot) => {
+        const list = document.getElementById("companyList");
+        document.getElementById("totalCount").innerText = snapshot.size + " Companies";
+        if (snapshot.empty) {
+          list.innerHTML = '<p class="muted">No companies registered yet.</p>';
+          return;
+        }
+        list.innerHTML = "";
+        snapshot.forEach((docSnap) => {
+          const c = docSnap.data();
+          const id = docSnap.id;
+          const now = Date.now();
+          const isExpired = c.expiryTime && now > c.expiryTime;
+          let statusHtml = '<span class="status-pending">⏳ PENDING APPROVAL</span>';
+          if (c.status === "locked" || isExpired) statusHtml = '<span class="status-locked">🔒 LOCKED / EXPIRED</span>';
+          else if (c.status === "active") statusHtml = '<span class="status-active">✅ ACTIVE</span>';
+
+          const expDate = c.expiryTime ? new Date(c.expiryTime).toLocaleDateString("en-IN") : "Not Set";
+          const utrInfo = c.lastUtr ? `<br>Last UTR: <b>${c.lastUtr}</b> (${c.lastPlan || ""})` : "";
+
+          list.innerHTML += `
+            <div class="company-item">
+              <div class="company-top">
+                <div>
+                  <strong>${c.companyName || "Unnamed Company"}</strong>
+                  <div class="muted">${c.adminEmail}<br>Expiry: <b>${expDate}</b>${utrInfo}</div>
+                </div>
+                ${statusHtml}
+              </div>
+              <div class="actions">
+                <button class="btn btn-success" onclick="extendPlan('${id}', 30)">+30 Days</button>
+                <button class="btn btn-success" onclick="extendPlan('${id}', 180)">+6 Months</button>
+                <button class="btn btn-success" onclick="extendPlan('${id}', 365)">+1 Year</button>
+                <button class="btn btn-danger" onclick="lockCompany('${id}')">Lock Now</button>
+              </div>
+            </div>`;
+        });
+      });
+    }
+
+    window.extendPlan = async function(id, days) {
+      const ref = doc(db, "saas_companies", id);
+      const snap = await getDoc(ref);
+      const baseTime = (snap.exists() && snap.data().expiryTime > Date.now()) ? snap.data().expiryTime : Date.now();
+      const newExpiry = baseTime + (days * 24 * 60 * 60 * 1000);
+      await updateDoc(ref, { status: "active", expiryTime: newExpiry });
+      alert("Approved & Extended by " + days + " days!");
+    };
+
+    window.lockCompany = async function(id) {
+      await updateDoc(doc(db, "saas_companies", id), { status: "locked" });
+      alert("Company App Locked!");
+    };
+  </script>
+</body>
+</html>
