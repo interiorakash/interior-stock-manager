@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Interior Stock</title>
+  <title>Interior Stock Manager</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background: #f1f5f9; color: #0f172a; padding-bottom: 70px; }
@@ -19,19 +19,32 @@
     .btn-primary { background: #0284c7; color: #fff; }
     .btn-success { background: #16a34a; color: #fff; }
     .btn-outline { background: #f8fafc; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .q-btn { padding: 15px 12px; border-radius: 12px; border: none; color: #fff; text-align: left; cursor: pointer; touch-action: manipulation; box-shadow: 0 2px 4px rgba(0,0,0,0.12); }
+    .q-btn strong { display: block; font-size: 14px; margin-bottom: 3px; }
+    .q-btn span { font-size: 11px; opacity: 0.92; display: block; }
+    .bg-in { background: #16a34a; }
+    .bg-out { background: #dc2626; }
+    .bg-ret { background: #d97706; }
+    .bg-used { background: #7c3aed; }
+    .bg-trans { background: #0284c7; grid-column: span 2; display: flex; justify-content: space-between; align-items: center; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-    .stat-box { background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; }
+    .stat-box { background: #fff; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; }
     .stat-box h3 { font-size: 20px; color: #0284c7; }
     .stat-box p { font-size: 12px; color: #64748b; }
     .stock-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
-    .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .stock-row:last-child { border-bottom: none; }
+    .badge { padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
     .badge-in { background: #dcfce7; color: #166534; }
     .badge-out { background: #fee2e2; color: #991b1b; }
-    .tabs { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; }
-    .tab-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .badge-ret { background: #fef3c7; color: #92400e; }
+    .badge-used { background: #ede9fe; color: #5b21b6; }
+    .badge-trans { background: #e0f2fe; color: #075985; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+    .tab-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
     .tab-btn.active { background: #0f172a; color: #fff; border-color: #0f172a; }
-    .overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; }
-    .overlay-box { background: #fff; border-radius: 14px; padding: 20px; max-width: 420px; width: 100%; }
+    .overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.92); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .overlay-box { background: #fff; border-radius: 14px; padding: 20px; max-width: 420px; width: 100%; max-height: 100%; overflow-y: auto; }
     .utr-wrap { position: relative; }
     .utr-tick { position: absolute; right: 12px; top: 12px; color: #16a34a; font-weight: 700; font-size: 14px; display: none; }
     .banner-warn { background: #fef3c7; color: #92400e; padding: 10px 14px; font-size: 12px; font-weight: 600; text-align: center; }
@@ -43,7 +56,7 @@
 
   <div class="topbar">
     <div>
-      <h1 id="brandTitle">Interior Stock</h1>
+      <h1 id="brandTitle">Interior Stock Manager</h1>
       <small id="subTitle">Site & Inventory Management</small>
     </div>
     <button id="logoutBtn" class="btn-outline" style="width:auto; padding:6px 10px; font-size:12px; display:none;" onclick="logoutUser()">Logout</button>
@@ -51,7 +64,7 @@
 
   <div id="expiryBanner" class="banner-warn" style="display:none;"></div>
 
-  <!-- 1. Login / Company Registration Screen -->
+  <!-- 1. Login Screen -->
   <div id="authScreen" class="container" style="margin-top:24px;">
     <div class="card">
       <h2>🏢 Company / Staff Login</h2>
@@ -72,7 +85,7 @@
   <div id="lockScreen" class="overlay" style="display:none;">
     <div class="overlay-box">
       <h2 id="lockTitle" style="margin-bottom:8px; color:#dc2626;">⏳ Approval Pending</h2>
-      <p id="lockDesc" class="muted" style="margin-bottom:14px;">Your registration request has been sent to the Master Owner. Please wait for approval.</p>
+      <p id="lockDesc" class="muted" style="margin-bottom:14px;">Your registration request has been sent to the Master Owner.</p>
       <button type="button" class="btn btn-primary" style="margin-bottom:10px;" onclick="checkStatusNow()">🔄 Check Approval Status</button>
 
       <div id="renewalSection" style="display:none; border-top:1px solid #e2e8f0; padding-top:12px;">
@@ -89,60 +102,100 @@
         </div>
         <button type="button" class="btn btn-success" onclick="submitRenewalUtr()">Verify UTR & Unlock Instantly</button>
       </div>
-      <button type="button" class="btn btn-outline" style="margin-top:10px; padding:13px; width:100%;" onclick="logoutUser()">Switch Account</button>
+      <button type="button" class="btn btn-outline" style="margin-top:10px;" onclick="logoutUser()">Switch Account</button>
     </div>
   </div>
 
-  <!-- 3. Main Workspace App -->
+  <!-- 3. Quick Entry Modal (All 5 Actions) -->
+  <div id="entryModal" class="overlay" style="display:none;">
+    <div class="overlay-box">
+      <h2 id="modalTitle" style="margin-bottom:12px;">+ STOCK IN</h2>
+      <input type="hidden" id="entryType">
+      <input type="text" id="itemNameInput" placeholder="Material Name (e.g., 18mm Marine Ply / 1.5mm Wire)">
+      <input type="number" id="itemQtyInput" placeholder="Quantity" inputmode="decimal" step="any">
+      <input type="text" id="itemUnitInput" placeholder="Unit (e.g., Sheets, Coil, Pcs, Box)">
+      <input type="text" id="fromSiteInput" placeholder="From Site (e.g., Site A)" style="display:none;">
+      <input type="text" id="siteNameInput" placeholder="Site Name / Remarks">
+      <button type="button" id="saveEntryBtn" class="btn btn-primary" onclick="submitStockEntry()">Save Transaction</button>
+      <button type="button" class="btn btn-outline" style="margin-top:8px;" onclick="closeEntryModal()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- 4. Main Workspace App -->
   <div id="appScreen" class="container" style="display:none;">
     <div class="tabs">
-      <button type="button" class="tab-btn active" onclick="switchTab('stockTab', this)">📦 Stock</button>
-      <button type="button" class="tab-btn" onclick="switchTab('entryTab', this)">➕ Entry</button>
+      <button type="button" class="tab-btn active" onclick="switchTab('stockTab', this)">⚡ Quick Entry</button>
+      <button type="button" class="tab-btn" onclick="switchTab('invTab', this)">📦 Live Stock</button>
       <button type="button" class="tab-btn" onclick="switchTab('logsTab', this)">📋 Logs</button>
-      <button type="button" class="tab-btn" id="adminTabBtn" onclick="switchTab('settingsTab', this)">⚙️ Sheet Sync</button>
+      <button type="button" class="tab-btn" id="adminTabBtn" onclick="switchTab('settingsTab', this)">⚙️ Sheet</button>
     </div>
 
+    <!-- Tab 1: 5 Quick Action Buttons + Recent Live Entries -->
     <div id="stockTab">
+      <div class="quick-grid">
+        <button type="button" class="q-btn bg-in" onclick="openEntryModal('IN', '+ STOCK IN')">
+          <strong>+ STOCK IN</strong>
+          <span>New Purchase / Direct Site</span>
+        </button>
+        <button type="button" class="q-btn bg-out" onclick="openEntryModal('OUT', '- STOCK OUT')">
+          <strong>- STOCK OUT</strong>
+          <span>Send to Site / Vendor Ret.</span>
+        </button>
+        <button type="button" class="q-btn bg-ret" onclick="openEntryModal('RETURN', '↺ RETURN')">
+          <strong>↺ RETURN</strong>
+          <span>Site Leftover to Used Stock</span>
+        </button>
+        <button type="button" class="q-btn bg-used" onclick="openEntryModal('USED', '⚡ USED ITEM')">
+          <strong>⚡ USED ITEM</strong>
+          <span>Issue Open Wire / Used Mat.</span>
+        </button>
+        <button type="button" class="q-btn bg-trans" onclick="openEntryModal('TRANSFER', '⇄ SITE TRANSFER')">
+          <div>
+            <strong>⇄ SITE TRANSFER</strong>
+            <span>Direct Site-to-Site Material Transfer</span>
+          </div>
+          <span style="font-size:18px; font-weight:700;">→</span>
+        </button>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h2 style="border:none; margin:0; padding:0;">Recent Entries (Live)</h2>
+          <button type="button" id="syncBtn" class="btn-outline" style="width:auto; padding:5px 10px; font-size:12px;" onclick="syncTwoWaySheet()">🔄 Sync</button>
+        </div>
+        <div id="recentPreviewList"><p class="muted">No transactions recorded yet.</p></div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Live Inventory (Fresh + Used Stock) -->
+    <div id="invTab" style="display:none;">
       <div class="grid-2">
         <div class="stat-box"><h3 id="totalItemsCount">0</h3><p>Total Materials</p></div>
         <div class="stat-box"><h3 id="totalLogsCount">0</h3><p>Transactions</p></div>
       </div>
       <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <h2 style="border:none; margin:0; padding:0;">Live Inventory</h2>
-          <button type="button" class="btn-outline" style="width:auto; padding:5px 10px; font-size:12px;" onclick="loadCompanyData()">🔄 Refresh</button>
-        </div>
-        <div id="stockList"><p class="muted">No stock items yet.</p></div>
+        <h2>📦 Fresh Godown Stock</h2>
+        <div id="stockList"><p class="muted">No fresh stock items yet.</p></div>
       </div>
-    </div>
-
-    <div id="entryTab" style="display:none;">
       <div class="card">
-        <h2>➕ Stock In / Out Entry</h2>
-        <select id="entryType">
-          <option value="IN">STOCK IN (Purchase / Godown)</option>
-          <option value="OUT">STOCK OUT (Site Issue)</option>
-          <option value="RETURN">RETURN (Site to Godown)</option>
-        </select>
-        <input type="text" id="itemNameInput" placeholder="Material Name (e.g., 18mm Marine Ply)">
-        <input type="number" id="itemQtyInput" placeholder="Quantity" inputmode="decimal" step="any">
-        <input type="text" id="itemUnitInput" placeholder="Unit (e.g., Sheets, Pcs, Box)">
-        <input type="text" id="siteNameInput" placeholder="Site Name / Remarks">
-        <button type="button" id="saveEntryBtn" class="btn btn-primary" onclick="submitStockEntry()">Save Transaction</button>
+        <h2>⚡ Used / Leftover Stock</h2>
+        <div id="usedStockList"><p class="muted">No returned/used items yet.</p></div>
       </div>
     </div>
 
+    <!-- Tab 3: All Logs -->
     <div id="logsTab" style="display:none;">
       <div class="card">
-        <h2>📋 Recent Movements</h2>
+        <h2>📋 All Movements</h2>
         <div id="logsList"><p class="muted">No transactions recorded.</p></div>
       </div>
     </div>
 
+    <!-- Tab 4: Two-Way Google Sheet -->
     <div id="settingsTab" style="display:none;">
       <div class="card">
-        <h2>🔗 Your Private Google Sheet (Two-Way Sync)</h2>
-        <p class="muted" style="margin-bottom:10px;">Connect your own Google Sheet Web App URL. Only you have access to your sheet.</p>
+        <h2>🔗 Two-Way Google Sheet Sync</h2>
+        <p class="muted" style="margin-bottom:10px;">Connect your private Google Sheet Web App URL. Manual edits made in your Sheet will sync directly into the app when you tap Sync.</p>
         <input type="url" id="clientSheetUrlInput" placeholder="Paste your Google Apps Script URL">
         <button type="button" class="btn btn-primary" onclick="saveClientSheetUrl()">Save & Sync My Sheet</button>
       </div>
@@ -165,11 +218,17 @@
     }
 
     function makeKey(text) {
-      // Safe Firestore document ID (works for Bengali / any language too)
+      // Safe Firestore document ID (also works for Bengali names)
       const slug = text.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
       let h = 5381;
       for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
       return (slug || "item") + "_" + h.toString(36);
+    }
+
+    function round2(n) { return Math.round(n * 100) / 100; }
+
+    function badgeClass(type) {
+      return { IN: "badge-in", OUT: "badge-out", RETURN: "badge-ret", USED: "badge-used", TRANSFER: "badge-trans" }[type] || "badge-in";
     }
 
     // ---------- Firestore REST Helpers ----------
@@ -212,10 +271,8 @@
 
     async function fsList(path) {
       const res = await fetch(`${BASE_URL}/${path}?pageSize=300`);
-      if (!res.ok) {
-        if (res.status === 404) return [];
-        throw new Error("Server error (" + res.status + ")");
-      }
+      if (res.status === 404) return [];
+      if (!res.ok) throw new Error("Server error (" + res.status + ")");
       const data = await res.json();
       return (data.documents || []).map(d => ({ id: d.name.split("/").pop(), ...fromFsDoc(d) }));
     }
@@ -302,7 +359,7 @@
       if (!currentUser) return;
       document.getElementById("authScreen").style.display = "none";
       document.getElementById("logoutBtn").style.display = "block";
-      document.getElementById("brandTitle").innerText = currentUser.companyName || "Interior Stock";
+      document.getElementById("brandTitle").innerText = currentUser.companyName || "Interior Stock Manager";
       document.getElementById("subTitle").innerText = `${currentUser.userName} (${currentUser.role.toUpperCase()})`;
       document.getElementById("adminTabBtn").style.display = currentUser.role !== "admin" ? "none" : "";
       await checkStatusNow();
@@ -315,9 +372,10 @@
       document.getElementById("authScreen").style.display = "block";
       document.getElementById("appScreen").style.display = "none";
       document.getElementById("lockScreen").style.display = "none";
+      document.getElementById("entryModal").style.display = "none";
       document.getElementById("logoutBtn").style.display = "none";
       document.getElementById("expiryBanner").style.display = "none";
-      document.getElementById("brandTitle").innerText = "Interior Stock";
+      document.getElementById("brandTitle").innerText = "Interior Stock Manager";
       document.getElementById("subTitle").innerText = "Site & Inventory Management";
       document.getElementById("statusMsg").innerText = "";
       const btn = document.getElementById("loginBtn");
@@ -421,43 +479,90 @@
       }
     }
 
-    // ---------- Data ----------
+    // ---------- Data display ----------
+    function renderStockRows(items, emptyMsg) {
+      if (items.length === 0) return `<p class="muted">${emptyMsg}</p>`;
+      return items.map(item => `
+        <div class="stock-row">
+          <div><strong>${escapeHtml(item.name)}</strong><div class="muted">Unit: ${escapeHtml(item.unit || "Pcs")}</div></div>
+          <div style="font-size:16px; font-weight:700; color:#0284c7;">${escapeHtml(item.qty)}</div>
+        </div>`).join("");
+    }
+
+    function renderLogRows(logs) {
+      return logs.map(l => {
+        const route = l.type === "TRANSFER"
+          ? `${escapeHtml(l.fromSite || "?")} → ${escapeHtml(l.site || "?")}`
+          : escapeHtml(l.site || "General");
+        return `
+        <div class="stock-row">
+          <div>
+            <span class="badge ${badgeClass(l.type)}">${escapeHtml(l.type)}</span> <strong>${escapeHtml(l.name)}</strong>
+            <div class="muted">${route} • By ${escapeHtml(l.by)}${l.time ? " • " + new Date(l.time).toLocaleString("en-IN") : ""}</div>
+          </div>
+          <strong>${escapeHtml(l.qty)} ${escapeHtml(l.unit)}</strong>
+        </div>`;
+      }).join("");
+    }
+
     async function loadCompanyData() {
       if (!currentUser) return;
       try {
-        const stocks = await fsList(`saas_companies/${currentUser.companyId}/stock`);
-        stocks.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
-        const sList = document.getElementById("stockList");
-        document.getElementById("totalItemsCount").innerText = stocks.length;
-        if (stocks.length === 0) {
-          sList.innerHTML = '<p class="muted">No stock items yet. Add from Entry tab.</p>';
-        } else {
-          sList.innerHTML = stocks.map(item => `
-            <div class="stock-row">
-              <div><strong>${escapeHtml(item.name)}</strong><div class="muted">Unit: ${escapeHtml(item.unit || "Pcs")}</div></div>
-              <div style="font-size:16px; font-weight:700; color:#0284c7;">${escapeHtml(item.qty)}</div>
-            </div>`).join("");
-        }
-
-        const logs = await fsList(`saas_companies/${currentUser.companyId}/logs`);
+        const base = `saas_companies/${currentUser.companyId}`;
+        const [stocks, used, logs] = await Promise.all([
+          fsList(`${base}/stock`),
+          fsList(`${base}/used_stock`),
+          fsList(`${base}/logs`)
+        ]);
+        const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""));
+        stocks.sort(byName);
+        used.sort(byName);
         logs.sort((a, b) => (b.time || 0) - (a.time || 0));
-        const lList = document.getElementById("logsList");
+
+        const freshVisible = stocks.filter(s => Number(s.qty) !== 0);
+        const usedVisible = used.filter(s => Number(s.qty) !== 0);
+
+        document.getElementById("totalItemsCount").innerText = freshVisible.length + usedVisible.length;
         document.getElementById("totalLogsCount").innerText = logs.length;
-        if (logs.length === 0) {
-          lList.innerHTML = '<p class="muted">No transactions yet.</p>';
-        } else {
-          lList.innerHTML = logs.slice(0, 25).map(l => `
-            <div class="stock-row">
-              <div>
-                <span class="badge ${l.type === 'OUT' ? 'badge-out' : 'badge-in'}">${escapeHtml(l.type)}</span> <strong>${escapeHtml(l.name)}</strong>
-                <div class="muted">${escapeHtml(l.site || "General")} • By ${escapeHtml(l.by)}${l.time ? " • " + new Date(l.time).toLocaleString("en-IN") : ""}</div>
-              </div>
-              <strong>${escapeHtml(l.qty)} ${escapeHtml(l.unit)}</strong>
-            </div>`).join("");
-        }
+        document.getElementById("stockList").innerHTML = renderStockRows(freshVisible, "No fresh stock items yet.");
+        document.getElementById("usedStockList").innerHTML = renderStockRows(usedVisible, "No returned/used items yet.");
+
+        document.getElementById("recentPreviewList").innerHTML =
+          logs.length ? renderLogRows(logs.slice(0, 5)) : '<p class="muted">No transactions recorded yet.</p>';
+        document.getElementById("logsList").innerHTML =
+          logs.length ? renderLogRows(logs.slice(0, 50)) : '<p class="muted">No transactions recorded.</p>';
+
+        return { stocks, used, logs };
       } catch (e) {
         alert("Could not load data: " + e.message);
+        return null;
       }
+    }
+
+    // ---------- Entry modal ----------
+    function openEntryModal(type, title) {
+      document.getElementById("entryType").value = type;
+      document.getElementById("modalTitle").innerText = title;
+      const isTransfer = type === "TRANSFER";
+      document.getElementById("fromSiteInput").style.display = isTransfer ? "block" : "none";
+      document.getElementById("siteNameInput").placeholder = isTransfer ? "To Site (e.g., Site B)" : "Site Name / Remarks";
+      document.getElementById("entryModal").style.display = "flex";
+    }
+
+    function closeEntryModal() {
+      document.getElementById("entryModal").style.display = "none";
+      ["itemNameInput", "itemQtyInput", "itemUnitInput", "fromSiteInput", "siteNameInput"].forEach(id => {
+        document.getElementById(id).value = "";
+      });
+    }
+
+    function pushToSheet(payload) {
+      if (!companyData || !companyData.sheetUrl) return;
+      fetch(companyData.sheetUrl, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify(payload)
+      }).catch(() => {});
     }
 
     async function submitStockEntry() {
@@ -465,11 +570,13 @@
       const name = document.getElementById("itemNameInput").value.trim();
       const qtyRaw = parseFloat(document.getElementById("itemQtyInput").value);
       const unit = document.getElementById("itemUnitInput").value.trim() || "Pcs";
+      const fromSite = document.getElementById("fromSiteInput").value.trim();
       const site = document.getElementById("siteNameInput").value.trim();
 
       if (!name) return alert("Please enter the material name.");
       if (!qtyRaw || qtyRaw <= 0) return alert("Please enter a valid quantity.");
-      const qty = Math.round(qtyRaw * 100) / 100;
+      if (type === "TRANSFER" && (!fromSite || !site)) return alert("Please enter both From Site and To Site.");
+      const qty = round2(qtyRaw);
 
       const btn = document.getElementById("saveEntryBtn");
       btn.disabled = true;
@@ -477,54 +584,53 @@
 
       try {
         const base = `saas_companies/${currentUser.companyId}`;
-        const stockKey = makeKey(name + "|" + unit);
-        const existing = await fsGet(`${base}/stock/${stockKey}`);
-        const current = existing ? Number(existing.qty) || 0 : 0;
-
-        if (type === "OUT" && qty > current) {
-          alert(`Not enough stock. Available: ${current} ${unit}`);
-          return;
-        }
-
-        const newQty = Math.round((type === "OUT" ? current - qty : current + qty) * 100) / 100;
+        const key = makeKey(name + "|" + unit);
         const now = Date.now();
 
-        await fsSet(`${base}/stock/${stockKey}`, { name: name, unit: unit, qty: newQty, updatedAt: now });
+        // IN / OUT affect fresh godown stock. RETURN / USED affect used (leftover) stock.
+        // TRANSFER only records the movement; godown stock does not change.
+        const collection = (type === "IN" || type === "OUT") ? "stock"
+                         : (type === "RETURN" || type === "USED") ? "used_stock" : null;
+        const decreases = (type === "OUT" || type === "USED");
+        let newQty = null;
+
+        if (collection) {
+          const existing = await fsGet(`${base}/${collection}/${key}`);
+          const current = existing ? Number(existing.qty) || 0 : 0;
+          if (decreases && qty > current) {
+            alert(`Not enough ${collection === "stock" ? "fresh" : "used"} stock. Available: ${current} ${unit}`);
+            return;
+          }
+          newQty = round2(decreases ? current - qty : current + qty);
+          await fsSet(`${base}/${collection}/${key}`, { name: name, unit: unit, qty: newQty, updatedAt: now });
+        }
+
         await fsSet(`${base}/logs/${now}_${Math.floor(Math.random() * 1000)}`, {
           type: type,
           name: name,
           qty: qty,
           unit: unit,
           site: site,
+          fromSite: fromSite,
           by: currentUser.userName,
           time: now
         });
 
-        // Optional: push to the company's own Google Sheet
-        if (companyData && companyData.sheetUrl) {
-          fetch(companyData.sheetUrl, {
-            method: "POST",
-            mode: "no-cors",
-            body: JSON.stringify({
-              action: "STOCK_ENTRY",
-              type: type,
-              name: name,
-              qty: qty,
-              unit: unit,
-              site: site,
-              by: currentUser.userName,
-              balance: newQty,
-              time: new Date(now).toLocaleString("en-IN")
-            })
-          }).catch(() => {});
-        }
+        pushToSheet({
+          action: "STOCK_ENTRY",
+          type: type,
+          name: name,
+          qty: qty,
+          unit: unit,
+          fromSite: fromSite,
+          site: site,
+          by: currentUser.userName,
+          balance: newQty,
+          time: new Date(now).toLocaleString("en-IN")
+        });
 
-        document.getElementById("itemNameInput").value = "";
-        document.getElementById("itemQtyInput").value = "";
-        document.getElementById("itemUnitInput").value = "";
-        document.getElementById("siteNameInput").value = "";
-        alert("Saved! New balance: " + newQty + " " + unit);
-        switchTab("stockTab", document.querySelector(".tabs .tab-btn"));
+        closeEntryModal();
+        await loadCompanyData();
       } catch (e) {
         alert("Save error: " + e.message);
       } finally {
@@ -533,6 +639,7 @@
       }
     }
 
+    // ---------- Google Sheet ----------
     async function saveClientSheetUrl() {
       const url = document.getElementById("clientSheetUrlInput").value.trim();
       if (!/^https:\/\/script\.google\.com\/.+/.test(url)) {
@@ -541,20 +648,72 @@
       try {
         await fsSet(`saas_companies/${currentUser.companyId}`, { ...companyData, sheetUrl: url });
         companyData.sheetUrl = url;
-        alert("Sheet URL saved. New entries will now sync to your sheet.");
+        alert("Sheet URL saved.");
+        syncTwoWaySheet();
       } catch (e) {
         alert("Save error: " + e.message);
       }
     }
 
+    // Expected sheet reply to GET <sheetUrl>?action=GET_STOCK :
+    //   { "stock": [ {"name":"...","unit":"...","qty":10} ], "used": [ ... ] }
+    async function syncTwoWaySheet() {
+      const btn = document.getElementById("syncBtn");
+      btn.disabled = true;
+      btn.innerText = "Syncing...";
+      try {
+        if (!companyData.sheetUrl) {
+          await loadCompanyData();
+          return;
+        }
+
+        // 1) Pull manual edits from the sheet
+        let pulled = false;
+        try {
+          const res = await fetch(companyData.sheetUrl + (companyData.sheetUrl.includes("?") ? "&" : "?") + "action=GET_STOCK");
+          const data = await res.json();
+          const base = `saas_companies/${currentUser.companyId}`;
+          const apply = async (rows, collection) => {
+            for (const r of (rows || [])) {
+              const name = String(r.name || "").trim();
+              const qty = parseFloat(r.qty);
+              if (!name || isNaN(qty)) continue;
+              const unit = String(r.unit || "Pcs").trim() || "Pcs";
+              await fsSet(`${base}/${collection}/${makeKey(name + "|" + unit)}`, {
+                name: name, unit: unit, qty: round2(qty), updatedAt: Date.now()
+              });
+            }
+          };
+          if (data && (Array.isArray(data.stock) || Array.isArray(data.used))) {
+            await apply(data.stock, "stock");
+            await apply(data.used, "used_stock");
+            pulled = true;
+          }
+        } catch (e) { /* sheet script does not support reading, fall back to push */ }
+
+        // 2) Reload app data, then push a snapshot to the sheet if pulling was not possible
+        const snapshot = await loadCompanyData();
+        if (!pulled && snapshot) {
+          pushToSheet({
+            action: "SYNC_ALL",
+            stock: snapshot.stocks.map(s => ({ name: s.name, unit: s.unit, qty: s.qty })),
+            used: snapshot.used.map(s => ({ name: s.name, unit: s.unit, qty: s.qty }))
+          });
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "🔄 Sync";
+      }
+    }
+
     // ---------- Tabs ----------
     function switchTab(tabId, btn, skipLoad) {
-      ["stockTab", "entryTab", "logsTab", "settingsTab"].forEach(id => {
+      ["stockTab", "invTab", "logsTab", "settingsTab"].forEach(id => {
         document.getElementById(id).style.display = (id === tabId) ? "block" : "none";
       });
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
       if (btn) btn.classList.add("active");
-      if (!skipLoad && currentUser && (tabId === "stockTab" || tabId === "logsTab")) loadCompanyData();
+      if (!skipLoad && currentUser && tabId !== "settingsTab") loadCompanyData();
     }
 
     // Auto-login if already signed in on this device
