@@ -66,6 +66,8 @@
     .ai-reply-box ul { margin-left: 18px; }
     .chip-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
     .chip { background: #e0e7ff; color: #3730a3; border: none; padding: 6px 10px; border-radius: 16px; font-size: 11px; font-weight: 600; cursor: pointer; }
+    body.is-supervisor .admin-only { display: none !important; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 200; }
     #statusMsg { margin-top: 10px; font-size: 13px; font-weight: 600; color: #0284c7; text-align: center; }
   </style>
 </head>
@@ -142,17 +144,17 @@
 
   <!-- 4. Main Workspace App -->
   <div id="appScreen" class="container" style="display:none;">
-    <div class="tabs">
+    <div class="tabs admin-only">
       <button type="button" class="tab-btn active" onclick="switchTab('stockTab', this)">⚡ Entry</button>
       <button type="button" class="tab-btn" onclick="switchTab('invTab', this)">📦 Stock</button>
-      <button type="button" class="tab-btn" onclick="switchTab('aiTab', this)">📹 CCTV AI</button>
+      <button type="button" class="tab-btn" id="aiTabBtn" onclick="switchTab('aiTab', this)">📹 CCTV AI</button>
       <button type="button" class="tab-btn" onclick="switchTab('logsTab', this)">📋 Logs</button>
       <button type="button" class="tab-btn" id="adminTabBtn" onclick="switchTab('settingsTab', this)">⚙️ Sheet</button>
     </div>
 
     <!-- Tab 1: Quick Action Buttons + Low Stock Red Alert -->
     <div id="stockTab">
-      <div id="lowStockAlertBox" class="alert-red-box" style="display:none;"></div>
+      <div id="lowStockAlertBox" class="alert-red-box admin-only" style="display:none;"></div>
 
       <div class="quick-grid">
         <button type="button" class="q-btn bg-in" onclick="openEntryModal('IN', '+ STOCK IN')">
@@ -180,7 +182,7 @@
         </button>
       </div>
 
-      <div class="card">
+      <div class="card admin-only">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <h2 style="border:none; margin:0; padding:0;">Recent Entries (Live)</h2>
           <button type="button" id="syncBtn" class="btn-outline" style="width:auto; padding:5px 10px; font-size:12px;" onclick="syncTwoWaySheet()">🔄 Sync</button>
@@ -209,14 +211,14 @@
     <div id="aiTab" style="display:none;">
       <div class="card">
         <h2>📹 App CCTV AI (Smart Audit & Search)</h2>
-        <p class="muted" style="margin-bottom:8px;">Type anything (even with spelling mistakes) to track site usage, duplicates, missing returns, or staff history:</p>
+        <p class="muted" style="margin-bottom:8px;">Ask in any language: English, Bengali, Hindi, or Banglish / Hinglish typed in English letters. Spelling mistakes are fine.</p>
         <div class="chip-wrap">
-          <button type="button" class="chip" onclick="askPresetAi('কোথায় গড়বড় হয়েছে? কে দুইবার এন্ট্রি করল?')">🚨 ফুল CCTV অডিট</button>
-          <button type="button" class="chip" onclick="askPresetAi('কে কত মেটেরিয়াল নিয়েছে?')">👷 স্টাফ হিসাব</button>
-          <button type="button" class="chip" onclick="askPresetAi('কোন সাইটে কত মাল গেছে?')">📍 সাইট রিপোর্ট</button>
-          <button type="button" class="chip" onclick="askPresetAi('কে ফেরত দিতে ভুলে গেছে?')">⏳ পেন্ডিং রিটার্ন চেক</button>
+          <button type="button" class="chip" onclick="askPresetAi('Find duplicate entries and mistakes')">🚨 Full CCTV Audit</button>
+          <button type="button" class="chip" onclick="askPresetAi('Who took how much material?')">👷 Staff Summary</button>
+          <button type="button" class="chip" onclick="askPresetAi('Which site received how much material?')">📍 Site Report</button>
+          <button type="button" class="chip" onclick="askPresetAi('Who forgot to return material?')">⏳ Pending Returns</button>
         </div>
-        <input type="text" id="aiQueryInput" placeholder="Ask CCTV AI (e.g., Emami site, Akash, duplicate, ply...)">
+        <input type="text" id="aiQueryInput" placeholder="Ask CCTV AI (e.g., Emami site, Akash kitna maal liya, ferot baki, duplicate)">
         <button type="button" class="btn btn-ai" onclick="runSmartAi()">Scan CCTV & Answer</button>
         <div id="aiResponseBox" class="ai-reply-box" style="display:none;"></div>
       </div>
@@ -224,13 +226,13 @@
       <div class="card">
         <h2>🔍 Manual List Filter</h2>
         <select id="filterSiteSelect" onchange="runManualFilter()">
-          <option value="">-- All Sites (সব সাইট) --</option>
+          <option value="">-- All Sites --</option>
         </select>
         <select id="filterPersonSelect" onchange="runManualFilter()">
-          <option value="">-- All Staff / Persons (সব ব্যক্তি) --</option>
+          <option value="">-- All Staff / Persons --</option>
         </select>
         <select id="filterItemSelect" onchange="runManualFilter()">
-          <option value="">-- All Materials (সব মেটেরিয়াল) --</option>
+          <option value="">-- All Materials --</option>
         </select>
         <div id="manualFilterSummary" style="background:#f1f5f9; padding:10px; border-radius:8px; margin-bottom:10px; font-size:13px; font-weight:600; color:#0f172a;"></div>
         <div id="manualFilterResults"></div>
@@ -273,6 +275,8 @@
     let dataLoaded = false;
 
     // ---------- Small helpers ----------
+    function isAdmin() { return !!currentUser && currentUser.role === "admin"; }
+
     function togglePinBox() {
       const role = document.getElementById("userRoleInput").value;
       document.getElementById("adminPinInput").style.display = (role === "admin") ? "block" : "none";
@@ -485,7 +489,9 @@
       document.getElementById("logoutBtn").style.display = "block";
       document.getElementById("brandTitle").innerText = currentUser.companyName || "Interior Stock Manager";
       document.getElementById("subTitle").innerText = `${currentUser.userName} (${currentUser.role.toUpperCase()})`;
-      document.getElementById("adminTabBtn").style.display = currentUser.role !== "admin" ? "none" : "";
+      document.body.classList.toggle("is-supervisor", !isAdmin());
+      document.getElementById("adminTabBtn").style.display = isAdmin() ? "" : "none";
+      document.getElementById("aiTabBtn").style.display = isAdmin() ? "" : "none";
       await checkStatusNow();
     }
 
@@ -509,6 +515,8 @@
       btn.disabled = false;
       btn.innerText = "Continue to Workspace";
       document.getElementById("adminTabBtn").style.display = "";
+      document.getElementById("aiTabBtn").style.display = "";
+      document.body.classList.remove("is-supervisor");
       togglePinBox();
       const firstTab = document.querySelector(".tabs .tab-btn");
       if (firstTab) switchTab("stockTab", firstTab, true);
@@ -698,7 +706,7 @@
         if (lowItems.length > 0) {
           alertBox.style.display = "block";
           alertBox.innerHTML = `<h3>🚨 Low Stock Alert (${lowItems.length})</h3>` +
-            lowItems.slice(0, 8).map(s => `<div style="font-size:13px; padding:2px 0;"><strong>${escapeHtml(s.name)}</strong> — ${escapeHtml(s.qty)} ${escapeHtml(s.unit || "")}${Number(s.qty) <= 0 ? " (শেষ)" : ""}</div>`).join("") +
+            lowItems.slice(0, 8).map(s => `<div style="font-size:13px; padding:2px 0;"><strong>${escapeHtml(s.name)}</strong> — ${escapeHtml(s.qty)} ${escapeHtml(s.unit || "")}${Number(s.qty) <= 0 ? " (out of stock)" : ""}</div>`).join("") +
             (lowItems.length > 8 ? `<div class="muted">+ ${lowItems.length - 8} more in Stock tab</div>` : "");
         } else {
           alertBox.style.display = "none";
@@ -743,6 +751,14 @@
       const match = [...cachedStocks, ...cachedUsed].find(s => norm(s.name) === norm(this.value));
       if (match && match.unit) unitEl.value = match.unit;
     });
+
+    function showToast(msg) {
+      const t = document.createElement("div");
+      t.className = "toast";
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 2200);
+    }
 
     function pushToSheet(payload) {
       if (!companyData || !companyData.sheetUrl) return;
@@ -818,6 +834,7 @@
         });
 
         closeEntryModal();
+        showToast("✓ Saved");
         await loadCompanyData();
       } catch (e) {
         alert("Save error: " + e.message);
@@ -829,6 +846,7 @@
 
     // ---------- Google Sheet ----------
     async function saveClientSheetUrl() {
+      if (!isAdmin()) return alert("Only the Admin can change the Sheet settings.");
       const url = document.getElementById("clientSheetUrlInput").value.trim();
       if (!/^https:\/\/script\.google\.com\/.+/.test(url)) {
         return alert("Please paste a valid Google Apps Script URL (starts with https://script.google.com/).");
@@ -846,6 +864,7 @@
     // Expected sheet reply to GET <sheetUrl>?action=GET_STOCK :
     //   { "stock": [ {"name":"...","unit":"...","qty":10} ], "used": [ ... ] }
     async function syncTwoWaySheet() {
+      if (!isAdmin()) return;
       const btn = document.getElementById("syncBtn");
       btn.disabled = true;
       btn.innerText = "Syncing...";
@@ -882,8 +901,8 @@
           collect(data.used, "used_stock", cachedUsed);
 
           if (plan.length === 0) {
-            alert("Sheet আর অ্যাপের স্টক মিলে আছে।");
-          } else if (confirm(`Sheet এ ${plan.length} টি আইটেমের সংখ্যা অ্যাপের থেকে আলাদা।\nSheet এর সংখ্যা দিয়ে অ্যাপের স্টক বদলাবেন?`)) {
+            alert("Sheet and app stock already match.");
+          } else if (confirm(`${plan.length} item(s) in the Sheet have a different quantity than the app.\nReplace the app stock with the Sheet quantities?`)) {
             for (const p of plan) {
               await fsSet(`${base}/${p.collection}/${p.key}`, { name: p.name, unit: p.unit, qty: p.qty, updatedAt: Date.now() });
             }
@@ -897,7 +916,7 @@
               stock: snap.stocks.map(s => ({ name: s.name, unit: s.unit, qty: s.qty })),
               used: snap.used.map(s => ({ name: s.name, unit: s.unit, qty: s.qty }))
             });
-            alert("Sheet থেকে স্টক পড়া যায়নি, তাই অ্যাপের বর্তমান স্টক Sheet এ পাঠানো হয়েছে।");
+            alert("Could not read stock from the Sheet, so the app's current stock was sent to the Sheet.");
           }
         }
       } catch (e) {
@@ -923,14 +942,14 @@
       const summary = document.getElementById("manualFilterSummary");
       const results = document.getElementById("manualFilterResults");
       if (!dataLoaded || cachedLogs.length === 0) {
-        summary.innerText = "কোনো লেনদেন নেই।";
+        summary.innerText = "No transactions yet.";
         results.innerHTML = "";
         return;
       }
 
       const counts = {};
       rows.forEach(l => { counts[l.type] = (counts[l.type] || 0) + 1; });
-      let text = `${rows.length} টি এন্ট্রি`;
+      let text = `${rows.length} entries`;
       const parts = Object.entries(counts).map(([t, c]) => `${t}: ${c}`);
       if (parts.length) text += " • " + parts.join(", ");
 
@@ -941,14 +960,16 @@
           totals[k] = round2((totals[k] || 0) + Number(l.qty || 0));
         });
         const tparts = Object.entries(totals).map(([k, v]) => { const [t, u] = k.split("|"); return `${t} ${v} ${u}`; });
-        if (tparts.length) text += "\nমোট: " + tparts.join(", ");
+        if (tparts.length) text += "\nTotal: " + tparts.join(", ");
       }
       summary.style.whiteSpace = "pre-line";
       summary.innerText = text;
-      results.innerHTML = rows.length ? renderLogRows(rows.slice(0, 100)) : '<p class="muted">কিছু পাওয়া যায়নি।</p>';
+      results.innerHTML = rows.length ? renderLogRows(rows.slice(0, 100)) : '<p class="muted">Nothing found.</p>';
     }
 
-    // ---------- CCTV AI (rule-based audit & fuzzy search, runs on your own data) ----------
+    // ---------- CCTV AI ----------
+    // Runs on your own data (no external AI service). It understands English, Bengali, Hindi
+    // (native script) and Banglish / Hinglish typed in English letters, including spelling mistakes.
     function askPresetAi(q) {
       document.getElementById("aiQueryInput").value = q;
       runSmartAi();
@@ -964,6 +985,106 @@
       return `<h4>${title}</h4>` + (itemsHtml.length ? `<ul>${itemsHtml.map(i => `<li>${i}</li>`).join("")}</ul>` : `<div class="muted">✅ ${emptyText}</div>`);
     }
 
+    const lc = set => new Set(Array.from(set).map(norm));
+
+    // ----- Language understanding -----
+    const nfc = s => String(s).normalize("NFC");
+
+    // Intent words: English + Bengali + Hindi (native script) + Banglish / Hinglish (English letters)
+    const AI_INTENTS = {
+      audit: [
+        "duplicate", "duplicates", "double", "twice", "repeat", "repeated", "audit", "fraud", "fake", "wrong",
+        "mistake", "mistakes", "suspicious", "problem", "issue", "issues", "cctv", "scan", "theft",
+        "gorbor", "gorbod", "golmal", "duibar", "dubar", "dobar", "somossa", "dhoka", "churi",
+        "gadbad", "gadbadi", "galat", "galti", "dobara", "dobaara", "dhokha", "chori", "ghotala", "samasya",
+        "গড়বড়", "গোলমাল", "দুইবার", "দুবার", "ডুপ্লিকেট", "অডিট", "সমস্যা", "জালিয়াতি", "প্রতারণা", "চুরি",
+        "गड़बड़", "गड़बड़ी", "गलत", "गलती", "दोबारा", "डुप्लिकेट", "धोखा", "चोरी", "घोटाला", "समस्या", "ऑडिट"
+      ],
+      pending: [
+        "pending", "return", "returns", "returned", "unreturned", "missing", "forgot", "forgotten", "outstanding", "due",
+        "ferot", "ferat", "fert", "pherot", "pherat", "baki", "bhule", "bhulgaya", "baaki",
+        "wapas", "vapas", "wapis", "vapis", "bhool", "bhoolgaya", "lautana", "lautaya", "lautao",
+        "ফেরত", "পেন্ডিং", "বাকি", "বাকী", "ভুলে",
+        "वापस", "पेंडिंग", "बाकी", "भूल", "लौटाना", "लौटाया", "लौटाओ"
+      ],
+      lowstock: [
+        "low", "shortage", "finished", "empty", "exhausted", "outofstock", "reorder", "short",
+        "shesh", "kom", "kam", "ghatati", "khatam", "khalas", "khali",
+        "শেষ", "কম", "ঘাটতি", "খালি", "ফুরিয়ে",
+        "खत्म", "ख़त्म", "कम", "कमी", "खाली", "खलास"
+      ],
+      staff: [
+        "staff", "person", "people", "who", "worker", "workers", "employee", "employees", "supervisor", "took", "taken", "issued", "whom", "member",
+        "ke", "kake", "kar", "niyeche", "niyese", "niyechhe", "nise", "nilo", "kormi", "lok",
+        "kaun", "kisne", "kiske", "kisko", "liya", "karmchari", "banda", "aadmi",
+        "কে", "কাকে", "কার", "নিয়েছে", "নিয়েছেন", "নিলো", "নিল", "স্টাফ", "কর্মী", "লোক", "সুপারভাইজার",
+        "कौन", "किसने", "किसके", "किसको", "लिया", "कर्मचारी", "स्टाफ", "बंदा", "आदमी"
+      ],
+      site: [
+        "site", "sites", "location", "locations", "place", "project", "where", "destination",
+        "kothay", "kothai", "jayga", "jaygay", "jaiga", "shite", "kahan", "kaha", "kidhar", "jagah", "jagha",
+        "সাইট", "কোথায়", "জায়গা", "প্রজেক্ট", "লোকেশন",
+        "साइट", "कहाँ", "कहां", "जगह", "प्रोजेक्ट", "लोकेशन"
+      ]
+    };
+    const AI_INTENT_ORDER = ["audit", "pending", "lowstock", "staff", "site"];
+    const AI_INTENTS_N = {};
+    Object.keys(AI_INTENTS).forEach(k => { AI_INTENTS_N[k] = AI_INTENTS[k].map(nfc); });
+
+    // Filler words that should never be treated as a site / person / material name
+    const AI_STOP_N = new Set([
+      "the", "for", "and", "all", "show", "tell", "give", "how", "much", "many", "what", "which", "list", "with", "from",
+      "have", "has", "did", "was", "are", "this", "that", "please", "material", "materials", "stock", "item", "items",
+      "report", "entered", "entry", "entries",
+      "koto", "kitna", "kitne", "mal", "maal", "saman", "samaan", "dekhao", "dikhao", "bolo", "batao", "bata", "hai", "hain",
+      "ache", "achhe", "ki", "kya", "kon", "kono", "ei", "ye", "yeh", "hoyeche", "hua", "gaya", "gese", "geche",
+      "দেখাও", "বলো", "কত", "কি", "কী", "কোন", "আছে", "মাল", "মেটেরিয়াল", "স্টক", "সব", "এন্ট্রি", "হয়েছে", "গেছে",
+      "कितना", "कितने", "माल", "दिखाओ", "बताओ", "है", "हैं", "क्या", "सामान", "स्टॉक", "सब", "एंट्री", "हुआ", "गया"
+    ].map(nfc));
+
+    function tokenize(text) {
+      return nfc(String(text || "").toLowerCase()).split(/[^\p{L}\p{N}\p{M}]+/u).filter(Boolean);
+    }
+
+    function tokenMatchesWord(tok, w) {
+      if (tok === w) return true;
+      const latin = /^[a-z]+$/;
+      if (latin.test(tok) && latin.test(w)) {
+        // English letters: tolerate spelling mistakes in longer words
+        if (w.length < 5 || tok.length < 5) return false;
+        const maxD = w.length >= 8 ? 2 : 1;
+        return Math.abs(tok.length - w.length) <= maxD && lev(tok, w) <= maxD;
+      }
+      // Bengali / Hindi: allow suffixes (for example a case ending added to the word)
+      return w.length >= 3 && !latin.test(w) && tok.startsWith(w);
+    }
+
+    function detectIntent(tokens) {
+      const intentTokens = new Set();
+      let best = null, bestScore = 0;
+      AI_INTENT_ORDER.forEach(intent => {
+        const hit = tokens.filter(t => AI_INTENTS_N[intent].some(w => tokenMatchesWord(t, w)));
+        hit.forEach(t => intentTokens.add(t));
+        const score = new Set(hit).size;
+        if (score > bestScore) { best = intent; bestScore = score; }
+      });
+      return { intent: best, intentTokens };
+    }
+
+    function findEntities(entityTokens) {
+      const allSites = uniqSorted(cachedLogs.flatMap(l => [l.site, l.fromSite]));
+      const allPeople = uniqSorted(cachedLogs.map(l => l.by));
+      const allItems = uniqSorted([...cachedLogs.map(l => l.name), ...cachedStocks.map(s => s.name), ...cachedUsed.map(s => s.name)]);
+      const sites = new Set(), people = new Set(), items = new Set();
+      entityTokens.forEach(t => {
+        allSites.forEach(s => { if (isFuzzyMatch(s, t)) sites.add(s); });
+        allPeople.forEach(p => { if (isFuzzyMatch(p, t)) people.add(p); });
+        allItems.forEach(i => { if (isFuzzyMatch(i, t)) items.add(i); });
+      });
+      return { sites, people, items, any: (sites.size + people.size + items.size) > 0 };
+    }
+
+    // ----- Reports -----
     function computePendingReturns() {
       const map = {};
       const add = (site, l, delta) => {
@@ -988,23 +1109,43 @@
         `<strong>${escapeHtml(p.site)}</strong>: ${escapeHtml(p.name)} — ${escapeHtml(round2(p.qty))} ${escapeHtml(p.unit)} <span class="muted">(${escapeHtml(Array.from(p.who).join(", "))})</span>`);
     }
 
+    const PENDING_NOTE = `<div class="muted" style="margin-top:8px;">Note: text in the Site / Remarks field is treated as a site. Material that was already consumed can still show up here.</div>`;
+
+    function pendingReport(ent) {
+      const sL = lc(ent.sites), pL = lc(ent.people), iL = lc(ent.items);
+      const list = computePendingReturns().filter(p =>
+        (!sL.size || sL.has(norm(p.site))) &&
+        (!iL.size || iL.has(norm(p.name))) &&
+        (!pL.size || Array.from(p.who).some(w => pL.has(norm(w))))
+      );
+      return section("⏳ Sent to site, not yet returned", pendingHtml(list), "Nothing pending — everything matches") + PENDING_NOTE;
+    }
+
+    function lowStockReport(ent) {
+      const iL = lc(ent.items);
+      const low = cachedStocks
+        .filter(s => Number(s.qty) <= LOW_STOCK_LIMIT && (!iL.size || iL.has(norm(s.name))))
+        .map(s => `<strong>${escapeHtml(s.name)}</strong> — ${escapeHtml(s.qty)} ${escapeHtml(s.unit || "")}${Number(s.qty) <= 0 ? " (out of stock)" : ""}`);
+      return section(`⚠️ Low stock (${LOW_STOCK_LIMIT} or less)`, low, "No low-stock items");
+    }
+
     function auditReport() {
       const logs = [...cachedLogs].sort((a, b) => (a.time || 0) - (b.time || 0));
 
-      // 1) Duplicate entries within 10 minutes
+      // 1) Duplicate entries inside the duplicate window
       const dups = [];
       for (let i = 1; i < logs.length; i++) {
         for (let j = i - 1; j >= 0 && (logs[i].time - logs[j].time) <= DUPLICATE_WINDOW_MS; j--) {
           const a = logs[i], b = logs[j];
           if (a.by === b.by && a.type === b.type && a.name === b.name && a.unit === b.unit &&
               a.qty === b.qty && a.site === b.site && a.fromSite === b.fromSite) {
-            dups.push(`<strong>${escapeHtml(a.by)}</strong> — ${escapeHtml(a.type)} ${escapeHtml(a.name)} ${escapeHtml(a.qty)} ${escapeHtml(a.unit)} (${escapeHtml(a.site || "General")}) <span class="muted">${escapeHtml(fmtTime(b.time))} ও ${escapeHtml(fmtTime(a.time))}</span>`);
+            dups.push(`<strong>${escapeHtml(a.by)}</strong> — ${escapeHtml(a.type)} ${escapeHtml(a.name)} ${escapeHtml(a.qty)} ${escapeHtml(a.unit)} (${escapeHtml(a.site || "General")}) <span class="muted">${escapeHtml(fmtTime(b.time))} and ${escapeHtml(fmtTime(a.time))}</span>`);
             break;
           }
         }
       }
 
-      // 2) Unusually large OUT quantities (> 3x the average for that item)
+      // 2) Unusually large OUT quantities (more than 3x the average for that item)
       const groups = {};
       logs.filter(l => l.type === "OUT").forEach(l => {
         const k = norm(l.name) + "|" + norm(l.unit);
@@ -1016,29 +1157,27 @@
         const avg = arr.reduce((s, l) => s + Number(l.qty || 0), 0) / arr.length;
         arr.forEach(l => {
           if (Number(l.qty) > avg * 3) {
-            big.push(`<strong>${escapeHtml(l.by)}</strong> — ${escapeHtml(l.name)} ${escapeHtml(l.qty)} ${escapeHtml(l.unit)} → ${escapeHtml(l.site || "General")} <span class="muted">(গড় ${escapeHtml(round2(avg))})</span>`);
+            big.push(`<strong>${escapeHtml(l.by)}</strong> — ${escapeHtml(l.name)} ${escapeHtml(l.qty)} ${escapeHtml(l.unit)} → ${escapeHtml(l.site || "General")} <span class="muted">(average ${escapeHtml(round2(avg))})</span>`);
           }
         });
       });
 
-      // 3) Pending returns
+      // 3) Pending returns  4) Low stock
       const pending = pendingHtml(computePendingReturns());
-
-      // 4) Low stock
       const low = cachedStocks.filter(s => Number(s.qty) <= LOW_STOCK_LIMIT)
         .map(s => `<strong>${escapeHtml(s.name)}</strong> — ${escapeHtml(s.qty)} ${escapeHtml(s.unit || "")}`);
 
       const issues = dups.length + big.length;
       const verdict = issues === 0
-        ? "✅ ডুপ্লিকেট বা অস্বাভাবিক এন্ট্রি পাওয়া যায়নি।"
-        : `🚨 ${issues} টি সন্দেহজনক এন্ট্রি পাওয়া গেছে — নিচে দেখুন।`;
+        ? "✅ No duplicate or unusual entries found."
+        : `🚨 ${issues} suspicious entr${issues === 1 ? "y" : "ies"} found — see below.`;
 
       return `<div><strong>${verdict}</strong></div>` +
-        section("🔁 ডুপ্লিকেট এন্ট্রি (১ মিনিটের মধ্যে একই জিনিস)", dups.slice(0, 10), "কোনো ডুপ্লিকেট নেই") +
-        section("📈 অস্বাভাবিক বেশি পরিমাণ OUT", big.slice(0, 8), "কিছু পাওয়া যায়নি") +
-        section("⏳ সাইটে পাঠানো, ফেরত আসেনি", pending, "সব মিলে আছে") +
-        section("⚠️ Low stock", low.slice(0, 10), "সব স্টক ঠিক আছে") +
-        `<div class="muted" style="margin-top:8px;">নোট: সাইটের ঘরে Remarks লিখলে সেটাকেও সাইট ধরা হয়। ব্যবহার হয়ে যাওয়া মাল "ফেরত আসেনি" তালিকায় থাকতে পারে।</div>`;
+        section(`🔁 Duplicate entries (same entry repeated within ${DUPLICATE_WINDOW_MS / 1000} seconds)`, dups.slice(0, 10), "No duplicates") +
+        section("📈 Unusually large OUT quantities", big.slice(0, 8), "Nothing unusual") +
+        section("⏳ Sent to site, not yet returned", pending, "Everything matches") +
+        section("⚠️ Low stock", low.slice(0, 10), "All stock levels are fine") +
+        PENDING_NOTE;
     }
 
     function staffReport() {
@@ -1052,21 +1191,22 @@
           people[p].items[k] = round2((people[p].items[k] || 0) + Number(l.qty || 0));
         }
       });
-      const names = Object.keys(people).sort((a, b) => Object.values(people[b].counts).reduce((s, c) => s + c, 0) - Object.values(people[a].counts).reduce((s, c) => s + c, 0));
+      const total = n => Object.values(people[n].counts).reduce((s, c) => s + c, 0);
+      const names = Object.keys(people).sort((a, b) => total(b) - total(a));
       const rows = names.map(n => {
         const c = Object.entries(people[n].counts).map(([t, v]) => `${t} ${v}`).join(", ");
         const top = Object.entries(people[n].items).sort((a, b) => b[1] - a[1]).slice(0, 3)
           .map(([k, v]) => { const [nm, u] = k.split("|"); return `${escapeHtml(nm)} ${escapeHtml(v)} ${escapeHtml(u)}`; }).join("; ");
-        return `<strong>${escapeHtml(n)}</strong>: ${escapeHtml(c)}${top ? `<div class="muted">নিয়েছে: ${top}</div>` : ""}`;
+        return `<strong>${escapeHtml(n)}</strong>: ${escapeHtml(c)}${top ? `<div class="muted">Took: ${top}</div>` : ""}`;
       });
-      return section("👷 স্টাফ অনুযায়ী হিসাব", rows, "কোনো লেনদেন নেই");
+      return section("👷 Staff summary", rows, "No transactions yet");
     }
 
     function siteReport() {
       const sites = {};
       cachedLogs.forEach(l => {
-        let target = null;
-        if (l.type === "OUT" || l.type === "TRANSFER") target = l.site;
+        if (l.type !== "OUT" && l.type !== "TRANSFER") return;
+        const target = l.site;
         if (!target || !String(target).trim()) return;
         const key = norm(target);
         if (!sites[key]) sites[key] = { name: String(target).trim(), items: {}, entries: 0 };
@@ -1077,54 +1217,33 @@
       const rows = Object.values(sites).sort((a, b) => b.entries - a.entries).slice(0, 15).map(s => {
         const items = Object.entries(s.items).sort((a, b) => b[1] - a[1]).slice(0, 5)
           .map(([k, v]) => { const [nm, u] = k.split("|"); return `${escapeHtml(nm)} ${escapeHtml(v)} ${escapeHtml(u)}`; }).join("; ");
-        return `<strong>${escapeHtml(s.name)}</strong> (${s.entries} বার)<div class="muted">${items}</div>`;
+        return `<strong>${escapeHtml(s.name)}</strong> (${s.entries} time${s.entries === 1 ? "" : "s"})<div class="muted">${items}</div>`;
       });
-      return section("📍 সাইট অনুযায়ী পাঠানো মাল (OUT + TRANSFER)", rows, "কোনো সাইটে মাল পাঠানো হয়নি");
+      return section("📍 Material sent per site (OUT + TRANSFER)", rows, "No material has been sent to any site yet");
     }
 
-    const AI_STOPWORDS = new Set([
-      "site", "সাইট", "সাইটে", "material", "মেটেরিয়াল", "staff", "স্টাফ", "stock", "স্টক", "মাল", "show", "all", "the", "for", "and",
-      "who", "how", "much", "what", "where", "report", "কোথায়", "গেছে", "করল", "নিয়েছে", "দেখাও", "বলো", "কত", "কোন"
-    ]);
-
-    function entityReport(query) {
-      const tokens = query.toLowerCase().split(/[\s,?।!.;:]+/).filter(w => w.length >= 3 && !AI_STOPWORDS.has(w));
-      if (tokens.length === 0) return null;
-
-      const allSites = uniqSorted(cachedLogs.flatMap(l => [l.site, l.fromSite]));
-      const allPeople = uniqSorted(cachedLogs.map(l => l.by));
-      const allItems = uniqSorted([...cachedLogs.map(l => l.name), ...cachedStocks.map(s => s.name), ...cachedUsed.map(s => s.name)]);
-
-      const sites = new Set(), people = new Set(), items = new Set();
-      tokens.forEach(t => {
-        allSites.forEach(s => { if (isFuzzyMatch(s, t)) sites.add(s); });
-        allPeople.forEach(p => { if (isFuzzyMatch(p, t)) people.add(p); });
-        allItems.forEach(i => { if (isFuzzyMatch(i, t)) items.add(i); });
-      });
-      if (sites.size + people.size + items.size === 0) return null;
-
-      const lc = set => new Set(Array.from(set).map(norm));
-      const sL = lc(sites), pL = lc(people), iL = lc(items);
+    function entityReport(ent) {
+      const sL = lc(ent.sites), pL = lc(ent.people), iL = lc(ent.items);
       const rows = cachedLogs.filter(l =>
         (sL.size === 0 || sL.has(norm(l.site)) || sL.has(norm(l.fromSite))) &&
         (pL.size === 0 || pL.has(norm(l.by))) &&
         (iL.size === 0 || iL.has(norm(l.name)))
       );
 
-      const matched = [...sites, ...people, ...items].map(escapeHtml).join(", ");
-      let html = `<h4>🔎 মিলেছে: ${matched}</h4>`;
+      const matched = [...ent.sites, ...ent.people, ...ent.items].map(escapeHtml).join(", ");
+      let html = `<h4>🔎 Matched: ${matched}</h4>`;
 
-      if (items.size) {
+      if (ent.items.size) {
         const stockLines = Array.from(iL).map(n => {
           const f = cachedStocks.find(s => norm(s.name) === n);
           const u = cachedUsed.find(s => norm(s.name) === n);
-          const nm = (f || u || {}).name;
+          const nm = (f || u || {}).name || n;
           return `<strong>${escapeHtml(nm)}</strong>: Fresh ${f ? escapeHtml(f.qty) : 0}, Used ${u ? escapeHtml(u.qty) : 0}`;
         });
-        html += section("📦 বর্তমান স্টক", stockLines, "—");
+        html += section("📦 Current stock", stockLines, "—");
       }
 
-      if (rows.length === 0) return html + '<div class="muted">কোনো লেনদেন পাওয়া যায়নি।</div>';
+      if (rows.length === 0) return html + '<div class="muted">No transactions found.</div>';
 
       const totals = {};
       rows.forEach(l => {
@@ -1135,37 +1254,39 @@
         const [t, n, u] = k.split("|");
         return `<span class="badge ${badgeClass(t)}">${escapeHtml(t)}</span> ${escapeHtml(n)} — ${escapeHtml(v)} ${escapeHtml(u)}`;
       });
-      html += section(`📊 মোট (${rows.length} টি এন্ট্রি)`, totalLines, "—");
-      html += `<h4>🕒 সাম্প্রতিক এন্ট্রি</h4>` + renderLogRows(rows.slice(0, 8));
+      html += section(`📊 Totals (${rows.length} entries)`, totalLines, "—");
+      html += `<h4>🕒 Recent entries</h4>` + renderLogRows(rows.slice(0, 8));
       return html;
     }
 
     async function runSmartAi() {
+      if (!isAdmin()) return alert("CCTV AI is available to Admin only.");
       const query = document.getElementById("aiQueryInput").value.trim();
-      if (!query) return alert("কিছু লিখুন, যেমন: Emami site, Akash, duplicate, ply");
+      if (!query) return alert("Type something, for example: Emami site, Akash, duplicate, ply");
       if (!dataLoaded) await loadCompanyData();
       if (!dataLoaded || cachedLogs.length === 0) {
-        showAi('<div class="muted">এখনো কোনো লেনদেন নেই, তাই স্ক্যান করার মতো কিছু নেই।</div>');
+        showAi('<div class="muted">There are no transactions yet, so there is nothing to scan.</div>');
         return;
       }
 
-      const q = query.toLowerCase();
-      if (/গড়বড়|দুইবার|ডুপ্লিকেট|duplicate|audit|অডিট|cctv/.test(q)) return showAi(auditReport());
-      if (/ফেরত|পেন্ডিং|pending|return/.test(q)) {
-        return showAi(section("⏳ সাইটে পাঠানো, ফেরত আসেনি", pendingHtml(computePendingReturns()), "সব মিলে আছে"));
-      }
+      const tokens = tokenize(query);
+      const { intent, intentTokens } = detectIntent(tokens);
+      const entityTokens = tokens.filter(t => t.length >= 3 && !intentTokens.has(t) && !AI_STOP_N.has(t));
+      const ent = findEntities(entityTokens);
 
-      const entity = entityReport(query);
-      if (entity) return showAi(entity);
+      if (intent === "audit") return showAi(auditReport());
+      if (intent === "pending") return showAi(pendingReport(ent));
+      if (intent === "lowstock") return showAi(lowStockReport(ent));
+      if (ent.any) return showAi(entityReport(ent));
+      if (intent === "staff") return showAi(staffReport());
+      if (intent === "site") return showAi(siteReport());
 
-      if (/কে কত|স্টাফ|staff|নিয়েছে|who/.test(q)) return showAi(staffReport());
-      if (/সাইট|site/.test(q)) return showAi(siteReport());
-
-      showAi('<div class="muted">কিছু মেলেনি। সাইট, স্টাফ বা মেটেরিয়ালের নাম লিখুন, অথবা উপরের বাটনগুলো চাপুন।</div>');
+      showAi('<div class="muted">Nothing matched. Type a site, staff or material name, or tap one of the buttons above. You can write in English, Bengali or Hindi, or in Banglish / Hinglish (English letters).</div>');
     }
 
     // ---------- Tabs ----------
     function switchTab(tabId, btn, skipLoad) {
+      if (tabId !== "stockTab" && !isAdmin()) return;
       ["stockTab", "invTab", "aiTab", "logsTab", "settingsTab"].forEach(id => {
         document.getElementById(id).style.display = (id === tabId) ? "block" : "none";
       });
