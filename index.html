@@ -66,6 +66,9 @@
     .ai-reply-box ul { margin-left: 18px; }
     .chip-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
     .chip { background: #e0e7ff; color: #3730a3; border: none; padding: 6px 10px; border-radius: 16px; font-size: 11px; font-weight: 600; cursor: pointer; }
+    .mini-btn { border: none; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 700; cursor: pointer; color: #fff; touch-action: manipulation; }
+    .mini-ok { background: #16a34a; }
+    .mini-no { background: #dc2626; }
     body.is-supervisor .admin-only { display: none !important; }
     .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 200; }
     #statusMsg { margin-top: 10px; font-size: 13px; font-weight: 600; color: #0284c7; text-align: center; }
@@ -87,7 +90,7 @@
   <div id="authScreen" class="container" style="margin-top:24px;">
     <div class="card">
       <h2>🏢 Company / Staff Login</h2>
-      <p class="muted" style="margin-bottom:12px;">Enter your Company ID (Admin Email) to access or register your workspace.</p>
+      <p class="muted" style="margin-bottom:12px;">Admin: enter your Gmail to open or register your workspace. Staff: use your name, the Admin's Gmail and a PIN you create. The Admin must approve your request before you can enter.</p>
       <input type="text" id="companyNameInput" placeholder="Company Name (e.g., Studio Space)">
       <input type="text" id="userNameInput" placeholder="Your Name (Admin / Supervisor)">
       <input type="email" id="companyEmailInput" placeholder="Company Admin Gmail ID">
@@ -149,6 +152,7 @@
       <button type="button" class="tab-btn" onclick="switchTab('invTab', this)">📦 Stock</button>
       <button type="button" class="tab-btn" id="aiTabBtn" onclick="switchTab('aiTab', this)">📹 CCTV AI</button>
       <button type="button" class="tab-btn" onclick="switchTab('logsTab', this)">📋 Logs</button>
+      <button type="button" class="tab-btn" id="staffTabBtn" onclick="switchTab('staffTab', this)">👥 Staff</button>
       <button type="button" class="tab-btn" id="adminTabBtn" onclick="switchTab('settingsTab', this)">⚙️ Sheet</button>
     </div>
 
@@ -247,6 +251,25 @@
       </div>
     </div>
 
+    <!-- Staff Access Control (Admin only) -->
+    <div id="staffTab" style="display:none;">
+      <div class="grid-2">
+        <div class="stat-box"><h3 id="staffActiveCount">0/10</h3><p>Active Staff (max 10)</p></div>
+        <div class="stat-box"><h3 id="staffPendingCount" style="color:#d97706;">0</h3><p>Pending Requests</p></div>
+      </div>
+      <div class="card">
+        <h2>⏳ Pending Requests</h2>
+        <div id="pendingStaffList"><p class="muted">No pending requests.</p></div>
+      </div>
+      <div class="card">
+        <h2>✅ Active Staff</h2>
+        <div id="activeStaffList"><p class="muted">No active staff yet.</p></div>
+      </div>
+      <div class="card">
+        <p class="muted">Staff join by choosing the Supervisor role on the login screen, entering their name, your Gmail and a PIN. They appear here as a pending request until you approve them. A removed staff member loses access the next time they save an entry or open the app.</p>
+      </div>
+    </div>
+
     <!-- Tab 5: Two-Way Google Sheet & Admin Settings -->
     <div id="settingsTab" style="display:none;">
       <div class="card">
@@ -279,7 +302,9 @@
 
     function togglePinBox() {
       const role = document.getElementById("userRoleInput").value;
-      document.getElementById("adminPinInput").style.display = (role === "admin") ? "block" : "none";
+      const pinEl = document.getElementById("adminPinInput");
+      pinEl.style.display = "block";
+      pinEl.placeholder = role === "admin" ? "Admin Security PIN (4-6 digits)" : "Your Staff PIN (4-6 digits; create one if you are new)";
     }
 
     function escapeHtml(s) {
@@ -390,6 +415,11 @@
       return (data.documents || []).map(d => ({ id: d.name.split("/").pop(), ...fromFsDoc(d) }));
     }
 
+    async function fsDelete(path) {
+      const res = await fetch(`${BASE_URL}/${path}`, { method: "DELETE" });
+      if (!res.ok && res.status !== 404) throw new Error("Delete failed (" + res.status + ")");
+    }
+
     // ---------- Login ----------
     async function handleLogin() {
       const statusEl = document.getElementById("statusMsg");
@@ -412,9 +442,9 @@
         statusEl.innerText = "Please enter Your Name and Company Email.";
         return;
       }
-      if (role === "admin" && !/^\d{4,6}$/.test(pin)) {
+      if (!/^\d{4,6}$/.test(pin)) {
         statusEl.style.color = "#dc2626";
-        statusEl.innerText = "Admin PIN must be 4-6 digits.";
+        statusEl.innerText = (role === "admin" ? "Admin PIN" : "Staff PIN") + " must be 4-6 digits.";
         return;
       }
 
@@ -467,12 +497,30 @@
           }
         }
 
+        // Staff: first login creates a pending request; later logins must match the same name + PIN
+        let staffKey = "";
+        let finalName = userName;
+        if (role !== "admin") {
+          staffKey = makeKey(norm(userName));
+          const sPath = `saas_companies/${companyId}/staff/${staffKey}`;
+          const sHash = cyrb53("is_staff_pin_v1|" + companyId + "|" + staffKey + "|" + pin);
+          const sDoc = await fsGet(sPath);
+          if (!sDoc) {
+            await fsSet(sPath, { name: userName, pinHash: sHash, status: "pending", requestedAt: Date.now() });
+          } else if (sDoc.pinHash !== sHash) {
+            return fail("Wrong PIN, or this name is already used by another staff member.");
+          } else {
+            finalName = sDoc.name || userName;
+          }
+        }
+
         currentUser = {
           companyId: companyId,
           companyName: existing.companyName || companyName,
-          userName: userName,
+          userName: finalName,
           email: email,
-          role: role
+          role: role,
+          staffKey: staffKey
         };
         localStorage.setItem("is_user", JSON.stringify(currentUser));
         document.getElementById("adminPinInput").value = "";
@@ -541,10 +589,28 @@
           document.getElementById("appScreen").style.display = "none";
           document.getElementById("lockScreen").style.display = "flex";
           document.getElementById("lockTitle").innerText = "🔒 Subscription Expired";
-          document.getElementById("lockDesc").innerText = "Enter your 12-digit UPI UTR number below to unlock instantly without losing any data.";
-          document.getElementById("renewalSection").style.display = "block";
+          document.getElementById("lockDesc").innerText = isAdmin()
+            ? "Enter your 12-digit UPI UTR number below to unlock instantly without losing any data."
+            : "This workspace's subscription has expired. Please contact your Admin.";
+          document.getElementById("renewalSection").style.display = isAdmin() ? "block" : "none";
           document.getElementById("displayUpi").innerText = masterConfig.upiId || "Ask Owner for UPI ID";
         } else {
+          if (!isAdmin()) {
+            if (!currentUser.staffKey) { alert("Please log in again."); return logoutUser(); }
+            const st = await fsGet(`saas_companies/${currentUser.companyId}/staff/${currentUser.staffKey}`);
+            if (!st) {
+              alert("Your access was removed by the Admin. You can send a new request from the login screen.");
+              return logoutUser();
+            }
+            if (st.status !== "active") {
+              document.getElementById("appScreen").style.display = "none";
+              document.getElementById("lockScreen").style.display = "flex";
+              document.getElementById("lockTitle").innerText = "⏳ Waiting for Admin Approval";
+              document.getElementById("lockDesc").innerText = `Your request to join ${companyData.companyName} was sent to the Admin. After the Admin approves you in Staff Access, tap "Check Approval Status".`;
+              document.getElementById("renewalSection").style.display = "none";
+              return;
+            }
+          }
           document.getElementById("lockScreen").style.display = "none";
           document.getElementById("appScreen").style.display = "block";
           if (companyData.sheetUrl) document.getElementById("clientSheetUrlInput").value = companyData.sheetUrl;
@@ -720,6 +786,7 @@
         refreshSuggestions();
         refreshFilterOptions();
 
+        if (isAdmin()) loadStaffList();
         return { stocks: cachedStocks, used: cachedUsed, logs: cachedLogs };
       } catch (e) {
         alert("Could not load data: " + e.message);
@@ -787,6 +854,14 @@
       btn.innerText = "Saving...";
 
       try {
+        if (!isAdmin()) {
+          const st = await fsGet(`saas_companies/${currentUser.companyId}/staff/${currentUser.staffKey}`);
+          if (!st || st.status !== "active") {
+            alert("Your access was removed or is not approved. Please contact the Admin.");
+            logoutUser();
+            return;
+          }
+        }
         const base = `saas_companies/${currentUser.companyId}`;
         const key = makeKey(name + "|" + unit);
         const now = Date.now();
@@ -1284,15 +1359,85 @@
       showAi('<div class="muted">Nothing matched. Type a site, staff or material name, or tap one of the buttons above. You can write in English, Bengali or Hindi, or in Banglish / Hinglish (English letters).</div>');
     }
 
+    // ---------- Staff access control (Admin only) ----------
+    const MAX_STAFF = 10;
+    let cachedStaff = [];
+
+    function staffRowHtml(s, kind) {
+      const label = kind === "pending" ? "Requested" : "Joined";
+      const when = kind === "pending" ? s.requestedAt : s.approvedAt;
+      const id = escapeHtml(s.id);
+      const buttons = kind === "pending"
+        ? `<button type="button" class="mini-btn mini-ok" onclick="approveStaff('${id}')">Approve</button><button type="button" class="mini-btn mini-no" onclick="removeStaff('${id}', true)">Reject</button>`
+        : `<button type="button" class="mini-btn mini-no" onclick="removeStaff('${id}', false)">Remove</button>`;
+      return `<div class="stock-row"><div><strong>${escapeHtml(s.name)}</strong><div class="muted">${label}: ${escapeHtml(fmtTime(when))}</div></div><div style="display:flex; gap:6px;">${buttons}</div></div>`;
+    }
+
+    async function loadStaffList() {
+      if (!isAdmin() || !currentUser) return;
+      try {
+        const list = await fsList(`saas_companies/${currentUser.companyId}/staff`);
+        cachedStaff = list;
+        const active = list.filter(s => s.status === "active").sort((a, b) => String(a.name).localeCompare(String(b.name)));
+        const pending = list.filter(s => s.status === "pending").sort((a, b) => (a.requestedAt || 0) - (b.requestedAt || 0));
+
+        document.getElementById("staffActiveCount").innerText = `${active.length}/${MAX_STAFF}`;
+        document.getElementById("staffPendingCount").innerText = pending.length;
+        document.getElementById("pendingStaffList").innerHTML =
+          pending.length ? pending.map(s => staffRowHtml(s, "pending")).join("") : '<p class="muted">No pending requests.</p>';
+        document.getElementById("activeStaffList").innerHTML =
+          active.length ? active.map(s => staffRowHtml(s, "active")).join("") : '<p class="muted">No active staff yet.</p>';
+        document.getElementById("staffTabBtn").innerText = pending.length ? `👥 Staff (${pending.length})` : "👥 Staff";
+      } catch (e) { /* ignore, the Admin can refresh by reopening the tab */ }
+    }
+
+    async function approveStaff(id) {
+      if (!isAdmin()) return;
+      try {
+        const path = `saas_companies/${currentUser.companyId}/staff`;
+        const list = await fsList(path);
+        const activeCount = list.filter(s => s.status === "active").length;
+        if (activeCount >= MAX_STAFF) {
+          return alert(`Staff limit reached (${MAX_STAFF}). Remove an active staff member before approving another.`);
+        }
+        const s = list.find(x => x.id === id);
+        if (!s) { alert("This request no longer exists."); return loadStaffList(); }
+        const { id: _id, ...data } = s;
+        await fsSet(`${path}/${id}`, { ...data, status: "active", approvedAt: Date.now() });
+        showToast("✓ " + s.name + " approved");
+        loadStaffList();
+      } catch (e) {
+        alert("Error: " + e.message);
+      }
+    }
+
+    async function removeStaff(id, isReject) {
+      if (!isAdmin()) return;
+      const s = cachedStaff.find(x => x.id === id);
+      const nm = s ? s.name : "this staff member";
+      const msg = isReject ? `Reject the request from ${nm}?` : `Remove ${nm}? They will lose access the next time they save an entry or open the app.`;
+      if (!confirm(msg)) return;
+      try {
+        await fsDelete(`saas_companies/${currentUser.companyId}/staff/${id}`);
+        showToast(isReject ? "Request rejected" : "Staff removed");
+        loadStaffList();
+      } catch (e) {
+        alert("Error: " + e.message);
+      }
+    }
+
     // ---------- Tabs ----------
     function switchTab(tabId, btn, skipLoad) {
       if (tabId !== "stockTab" && !isAdmin()) return;
-      ["stockTab", "invTab", "aiTab", "logsTab", "settingsTab"].forEach(id => {
+      ["stockTab", "invTab", "aiTab", "logsTab", "staffTab", "settingsTab"].forEach(id => {
         document.getElementById(id).style.display = (id === tabId) ? "block" : "none";
       });
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
       if (btn) btn.classList.add("active");
-      if (!skipLoad && currentUser && tabId !== "settingsTab") loadCompanyData();
+      if (!skipLoad && currentUser) {
+        if (tabId === "staffTab") loadStaffList();
+        else if (tabId !== "settingsTab") loadCompanyData();
+      }
     }
 
     // ---------- Start ----------
