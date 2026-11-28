@@ -9,9 +9,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Interior Stock">
   <title>Interior Stock Manager</title>
-  <link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;Interior Stock Manager&quot;,&quot;short_name&quot;:&quot;InteriorStock&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#0f172a&quot;,&quot;theme_color&quot;:&quot;#0f172a&quot;}">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    html, body { overscroll-behavior-y: contain; }
     body { background: #f1f5f9; color: #0f172a; padding-bottom: 70px; -webkit-tap-highlight-color: transparent; }
     .topbar { background: #0f172a; color: #fff; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
     .topbar h1 { font-size: 18px; font-weight: 700; color: #38bdf8; }
@@ -1438,6 +1441,11 @@
         if (tabId === "staffTab") loadStaffList();
         else if (tabId !== "settingsTab") loadCompanyData();
       }
+    }
+
+    // Offline-ready install support
+    if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
     }
 
     // ---------- Start ----------
