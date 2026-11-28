@@ -3,181 +3,296 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Interior Stock — Master Owner Control</title>
+  <meta name="theme-color" content="#0f172a">
+  <title>Interior Stock - Master Owner</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: #0f172a; color: #f8fafc; padding: 16px; padding-bottom: 60px; }
-    .header { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 14px 16px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #334155; }
-    .header h1 { font-size: 18px; color: #38bdf8; }
-    .badge { background: #0284c7; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 20px; font-weight: 600; }
-    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-    .card h2 { font-size: 15px; margin-bottom: 12px; color: #e2e8f0; border-bottom: 1px solid #334155; padding-bottom: 8px; }
-    input, select { width: 100%; padding: 11px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 14px; }
-    .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
+    body { background: #f1f5f9; color: #0f172a; padding-bottom: 60px; }
+    .topbar { background: #0f172a; color: #fff; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+    .topbar h1 { font-size: 18px; font-weight: 700; color: #38bdf8; }
+    .topbar small { font-size: 11px; color: #94a3b8; display: block; }
+    .container { padding: 14px; max-width: 640px; margin: 0 auto; }
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+    .card h2 { font-size: 15px; margin-bottom: 12px; color: #1e293b; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+    input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: #fff; }
+    .btn { width: 100%; padding: 13px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-primary { background: #0284c7; color: #fff; }
-    .btn-success { background: #16a34a; color: #fff; padding: 8px 12px; font-size: 13px; width: auto; }
-    .btn-danger { background: #dc2626; color: #fff; padding: 8px 12px; font-size: 13px; width: auto; }
-    .btn-warn { background: #d97706; color: #fff; padding: 8px 12px; font-size: 13px; width: auto; }
-    .company-item { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
-    .company-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-    .status-active { color: #4ade80; font-weight: 700; font-size: 12px; }
-    .status-pending { color: #facc15; font-weight: 700; font-size: 12px; }
-    .status-locked { color: #f87171; font-weight: 700; font-size: 12px; }
-    .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-    .muted { color: #94a3b8; font-size: 12px; line-height: 1.5; }
-    #loginBox { max-width: 400px; margin: 60px auto; }
+    .btn-outline { background: #f8fafc; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    .mini-btn { border: none; border-radius: 8px; padding: 9px 12px; font-size: 12px; font-weight: 700; cursor: pointer; color: #fff; touch-action: manipulation; }
+    .mini-ok { background: #16a34a; }
+    .mini-no { background: #dc2626; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+    .stat-box { background: #fff; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0; text-align: center; }
+    .stat-box h3 { font-size: 20px; color: #0284c7; }
+    .stat-box p { font-size: 11px; color: #64748b; }
+    .badge { padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .badge-pending { background: #fef3c7; color: #92400e; }
+    .badge-active { background: #dcfce7; color: #166534; }
+    .badge-locked { background: #fee2e2; color: #991b1b; }
+    .company { border-top: 1px solid #f1f5f9; padding: 12px 0; }
+    .company:first-child { border-top: none; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .muted { color: #64748b; font-size: 12px; line-height: 1.5; }
+    #loginMsg { margin-top: 10px; font-size: 13px; font-weight: 600; color: #dc2626; text-align: center; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 200; }
   </style>
 </head>
 <body>
 
-  <!-- Owner PIN Lock Screen -->
-  <div id="loginBox" class="card">
-    <h2>🔒 Master Owner Authentication</h2>
-    <p class="muted" style="margin-bottom:12px;">Enter your secret Master PIN to control Interior Stock licenses.</p>
-    <input type="password" id="ownerPinInput" placeholder="Enter Master PIN (Default: 2026)">
-    <button class="btn btn-primary" onclick="unlockOwner()">Unlock Control Panel</button>
+  <div class="topbar">
+    <div>
+      <h1>Master Owner</h1>
+      <small id="whoami">Interior Stock Manager</small>
+    </div>
+    <button id="logoutBtn" class="btn-outline" style="width:auto; padding:6px 10px; font-size:12px; display:none;" onclick="logout()">Logout</button>
   </div>
 
-  <!-- Main Owner Dashboard -->
-  <div id="dashboard" style="display:none;">
-    <div class="header">
-      <div>
-        <h1>Interior Stock</h1>
-        <div class="muted">Master SaaS Controller</div>
-      </div>
-      <span class="badge" id="totalCount">0 Companies</span>
-    </div>
-
-    <!-- Payment & Plan Settings -->
+  <!-- Login -->
+  <div id="loginScreen" class="container" style="margin-top:24px;">
     <div class="card">
-      <h2>⚙️ Payment & Plan Settings (Future Ready)</h2>
-      <input type="text" id="upiIdInput" placeholder="Your UPI ID (e.g., name@okicici)">
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
-        <input type="number" id="price1m" placeholder="1M ₹ (e.g. 499)">
-        <input type="number" id="price6m" placeholder="6M ₹ (e.g. 2499)">
-        <input type="number" id="price1y" placeholder="1Y ₹ (e.g. 4499)">
-      </div>
-      <input type="password" id="newPinInput" placeholder="Change Master PIN (Optional)">
-      <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
-    </div>
-
-    <!-- Registered Companies List -->
-    <div class="card">
-      <h2>🏢 Client Companies & Licenses</h2>
-      <div id="companyList"><p class="muted">Loading companies...</p></div>
+      <h2>🔐 Owner Login</h2>
+      <p class="muted" style="margin-bottom:12px;">Sign in with the owner email and password created in Firebase Authentication.</p>
+      <input type="email" id="emailInput" value="interiorstock2026@gmail.com" autocomplete="username">
+      <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
+      <button type="button" id="loginBtn" class="btn btn-primary" onclick="login()">Sign in</button>
+      <div id="loginMsg"></div>
     </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  <!-- Panel -->
+  <div id="panel" class="container" style="display:none;">
+    <div class="grid-3">
+      <div class="stat-box"><h3 id="cntPending" style="color:#d97706;">0</h3><p>Pending</p></div>
+      <div class="stat-box"><h3 id="cntActive" style="color:#16a34a;">0</h3><p>Active</p></div>
+      <div class="stat-box"><h3 id="cntLocked" style="color:#dc2626;">0</h3><p>Locked / Expired</p></div>
+    </div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBW8ZkJEjAjHh8CDJ3yJvcRYwQRhHBkkH4",
-      authDomain: "interior-stock-app-c7a1f.firebaseapp.com",
-      projectId: "interior-stock-app-c7a1f",
-      storageBucket: "interior-stock-app-c7a1f.firebasestorage.app",
-      messagingSenderId: "353218241112",
-      appId: "1:353218241112:web:5c8ae04253ea372d41e02d"
-    };
+    <div class="card">
+      <div class="row" style="justify-content:space-between; margin-bottom:10px;">
+        <h2 style="border:none; margin:0; padding:0;">🏢 Companies</h2>
+        <button type="button" class="btn-outline" style="width:auto; padding:5px 10px; font-size:12px;" onclick="loadCompanies()">🔄 Refresh</button>
+      </div>
+      <div id="companyList"><p class="muted">Loading...</p></div>
+    </div>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    let currentPin = "2026";
+    <div class="card">
+      <h2>⚙️ Payment & Email Settings</h2>
+      <p class="muted" style="margin-bottom:10px;">The app shows this UPI ID to companies whose plan has expired.</p>
+      <input type="text" id="upiInput" placeholder="UPI ID (e.g., name@bank)">
+      <input type="url" id="scriptInput" placeholder="Email alert script URL (Google Apps Script)">
+      <button type="button" class="btn btn-primary" onclick="saveConfig()">Save Settings</button>
+    </div>
+  </div>
 
-    async function loadSettings() {
-      const snap = await getDoc(doc(db, "saas_config", "master"));
-      if (snap.exists()) {
-        const d = snap.data();
-        if (d.masterPin) currentPin = d.masterPin;
-        document.getElementById("upiIdInput").value = d.upiId || "";
-        document.getElementById("price1m").value = d.price1m || "";
-        document.getElementById("price6m").value = d.price6m || "";
-        document.getElementById("price1y").value = d.price1y || "";
-      }
+  <script>
+    const API_KEY = "AIzaSyBW8ZkJEjAjHh8CDJ3yJvcRYwQRhHBkkH4";
+    const PROJECT_ID = "interior-stock-app-c7a1f";
+    const BASE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+    const DAY = 24 * 60 * 60 * 1000;
+    const PLAN_DAYS = { "1 Month": 30, "6 Months": 180, "1 Year": 365 };
+
+    let idToken = null, refreshToken = null, tokenExpiry = 0;
+
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     }
-    loadSettings();
 
-    window.unlockOwner = function() {
-      const entered = document.getElementById("ownerPinInput").value.trim();
-      if (entered === currentPin) {
-        document.getElementById("loginBox").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
-        listenCompanies();
-      } else {
-        alert("Wrong Master PIN!");
+    function showToast(msg) {
+      const t = document.createElement("div");
+      t.className = "toast";
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 2200);
+    }
+
+    function fromFsDoc(doc) {
+      const obj = {};
+      for (const [k, v] of Object.entries((doc && doc.fields) || {})) {
+        if (v.stringValue !== undefined) obj[k] = v.stringValue;
+        else if (v.integerValue !== undefined) obj[k] = Number(v.integerValue);
+        else if (v.doubleValue !== undefined) obj[k] = Number(v.doubleValue);
       }
-    };
+      return obj;
+    }
 
-    window.saveSettings = async function() {
-      const newPin = document.getElementById("newPinInput").value.trim();
-      const payload = {
-        upiId: document.getElementById("upiIdInput").value.trim(),
-        price1m: document.getElementById("price1m").value.trim(),
-        price6m: document.getElementById("price6m").value.trim(),
-        price1y: document.getElementById("price1y").value.trim(),
-        masterPin: newPin || currentPin,
-        masterEmailScript: "https://script.google.com/macros/s/AKfycbxNpcZCMiSAUZupBmKZYt_eAIX2q7hVQx-b31Cib7PYwnF-MzI2lwQdZCQFUqKmINylyg/exec"
-      };
-      await setDoc(doc(db, "saas_config", "master"), payload, { merge: true });
-      if (newPin) currentPin = newPin;
-      alert("Master Settings Saved!");
-    };
+    // ---------- Firebase Authentication (email + password) ----------
+    async function login() {
+      const msg = document.getElementById("loginMsg");
+      const btn = document.getElementById("loginBtn");
+      const email = document.getElementById("emailInput").value.trim();
+      const password = document.getElementById("passwordInput").value;
+      if (!email || !password) { msg.innerText = "Enter email and password."; return; }
 
-    function listenCompanies() {
-      onSnapshot(collection(db, "saas_companies"), (snapshot) => {
-        const list = document.getElementById("companyList");
-        document.getElementById("totalCount").innerText = snapshot.size + " Companies";
-        if (snapshot.empty) {
-          list.innerHTML = '<p class="muted">No companies registered yet.</p>';
-          return;
-        }
-        list.innerHTML = "";
-        snapshot.forEach((docSnap) => {
-          const c = docSnap.data();
-          const id = docSnap.id;
-          const now = Date.now();
-          const isExpired = c.expiryTime && now > c.expiryTime;
-          let statusHtml = '<span class="status-pending">⏳ PENDING APPROVAL</span>';
-          if (c.status === "locked" || isExpired) statusHtml = '<span class="status-locked">🔒 LOCKED / EXPIRED</span>';
-          else if (c.status === "active") statusHtml = '<span class="status-active">✅ ACTIVE</span>';
-
-          const expDate = c.expiryTime ? new Date(c.expiryTime).toLocaleDateString("en-IN") : "Not Set";
-          const utrInfo = c.lastUtr ? `<br>Last UTR: <b>${c.lastUtr}</b> (${c.lastPlan || ""})` : "";
-
-          list.innerHTML += `
-            <div class="company-item">
-              <div class="company-top">
-                <div>
-                  <strong>${c.companyName || "Unnamed Company"}</strong>
-                  <div class="muted">${c.adminEmail}<br>Expiry: <b>${expDate}</b>${utrInfo}</div>
-                </div>
-                ${statusHtml}
-              </div>
-              <div class="actions">
-                <button class="btn btn-success" onclick="extendPlan('${id}', 30)">+30 Days</button>
-                <button class="btn btn-success" onclick="extendPlan('${id}', 180)">+6 Months</button>
-                <button class="btn btn-success" onclick="extendPlan('${id}', 365)">+1 Year</button>
-                <button class="btn btn-danger" onclick="lockCompany('${id}')">Lock Now</button>
-              </div>
-            </div>`;
+      btn.disabled = true;
+      btn.innerText = "Signing in...";
+      msg.innerText = "";
+      try {
+        const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${API_KEY}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email, password: password, returnSecureToken: true })
         });
-      });
+        const data = await res.json();
+        if (!res.ok) {
+          const code = (data.error && data.error.message) || "";
+          if (code.includes("OPERATION_NOT_ALLOWED")) throw new Error("Email/Password sign-in is not enabled in Firebase Authentication.");
+          if (code.includes("EMAIL_NOT_FOUND") || code.includes("INVALID_PASSWORD") || code.includes("INVALID_LOGIN_CREDENTIALS")) throw new Error("Wrong email or password, or this user does not exist in Firebase Authentication.");
+          if (code.includes("TOO_MANY_ATTEMPTS")) throw new Error("Too many attempts. Try again later.");
+          throw new Error(code || "Sign-in failed.");
+        }
+        idToken = data.idToken;
+        refreshToken = data.refreshToken;
+        tokenExpiry = Date.now() + (Number(data.expiresIn) - 60) * 1000;
+        document.getElementById("passwordInput").value = "";
+        document.getElementById("loginScreen").style.display = "none";
+        document.getElementById("panel").style.display = "block";
+        document.getElementById("logoutBtn").style.display = "block";
+        document.getElementById("whoami").innerText = email;
+        loadCompanies();
+        loadConfig();
+      } catch (e) {
+        msg.innerText = e.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Sign in";
+      }
     }
 
-    window.extendPlan = async function(id, days) {
-      const ref = doc(db, "saas_companies", id);
-      const snap = await getDoc(ref);
-      const baseTime = (snap.exists() && snap.data().expiryTime > Date.now()) ? snap.data().expiryTime : Date.now();
-      const newExpiry = baseTime + (days * 24 * 60 * 60 * 1000);
-      await updateDoc(ref, { status: "active", expiryTime: newExpiry });
-      alert("Approved & Extended by " + days + " days!");
-    };
+    function logout() {
+      idToken = null; refreshToken = null; tokenExpiry = 0;
+      document.getElementById("panel").style.display = "none";
+      document.getElementById("loginScreen").style.display = "block";
+      document.getElementById("logoutBtn").style.display = "none";
+      document.getElementById("whoami").innerText = "Interior Stock Manager";
+    }
 
-    window.lockCompany = async function(id) {
-      await updateDoc(doc(db, "saas_companies", id), { status: "locked" });
-      alert("Company App Locked!");
-    };
+    async function getToken() {
+      if (idToken && Date.now() < tokenExpiry) return idToken;
+      if (!refreshToken) throw new Error("Session expired. Please sign in again.");
+      const res = await fetch(`https://securetoken.googleapis.com/v1/token?key=${API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "grant_type=refresh_token&refresh_token=" + encodeURIComponent(refreshToken)
+      });
+      const data = await res.json();
+      if (!res.ok) { logout(); throw new Error("Session expired. Please sign in again."); }
+      idToken = data.id_token;
+      refreshToken = data.refresh_token;
+      tokenExpiry = Date.now() + (Number(data.expires_in) - 60) * 1000;
+      return idToken;
+    }
+
+    async function api(path, options) {
+      const token = await getToken();
+      const res = await fetch(`${BASE_URL}/${path}`, {
+        ...(options || {}),
+        headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" }
+      });
+      if (res.status === 404) return null;
+      if (res.status === 403) throw new Error("Permission denied. The owner email in the Firestore rules must match the email you signed in with.");
+      if (!res.ok) throw new Error("Server error (" + res.status + ")");
+      return res.json();
+    }
+
+    // ---------- Companies ----------
+    function fmtDate(ms) { return ms ? new Date(ms).toLocaleDateString("en-IN") : "—"; }
+
+    async function loadCompanies() {
+      const list = document.getElementById("companyList");
+      try {
+        const data = await api("saas_companies?pageSize=300");
+        const companies = ((data && data.documents) || []).map(d => ({ id: d.name.split("/").pop(), ...fromFsDoc(d) }));
+        const now = Date.now();
+        const state = c => (c.status === "pending") ? "pending"
+                         : (c.status === "locked" || (c.expiryTime && now > c.expiryTime)) ? "locked" : "active";
+        const order = { pending: 0, locked: 1, active: 2 };
+        companies.sort((a, b) => order[state(a)] - order[state(b)] || String(a.companyName).localeCompare(String(b.companyName)));
+
+        document.getElementById("cntPending").innerText = companies.filter(c => state(c) === "pending").length;
+        document.getElementById("cntActive").innerText = companies.filter(c => state(c) === "active").length;
+        document.getElementById("cntLocked").innerText = companies.filter(c => state(c) === "locked").length;
+
+        if (companies.length === 0) { list.innerHTML = '<p class="muted">No companies yet.</p>'; return; }
+
+        list.innerHTML = companies.map(c => {
+          const st = state(c);
+          const id = escapeHtml(c.id);
+          const activateLabel = st === "pending" ? "Approve" : "Activate / Renew";
+          return `
+          <div class="company">
+            <div class="row" style="justify-content:space-between;">
+              <strong>${escapeHtml(c.companyName)}</strong>
+              <span class="badge badge-${st}">${st}</span>
+            </div>
+            <div class="muted">${escapeHtml(c.adminEmail)}</div>
+            <div class="muted">Registered: ${escapeHtml(fmtDate(c.createdAt))} • Expires: ${escapeHtml(fmtDate(c.expiryTime))}${c.lastPlan ? " • Last plan: " + escapeHtml(c.lastPlan) : ""}${c.lastUtr ? " • UTR: " + escapeHtml(c.lastUtr) : ""}</div>
+            ${c.verificationCode ? `<div class="muted">Verification code: <strong>${escapeHtml(c.verificationCode)}</strong></div>` : ""}
+            <div class="row" style="margin-top:8px;">
+              <select id="plan_${id}" style="margin:0; flex:1;">
+                ${Object.keys(PLAN_DAYS).map(p => `<option value="${p}">${p}</option>`).join("")}
+              </select>
+              <button type="button" class="mini-btn mini-ok" onclick="activateCompany('${id}', ${Number(c.expiryTime) || 0})">${activateLabel}</button>
+              ${c.status !== "locked" ? `<button type="button" class="mini-btn mini-no" onclick="lockCompany('${id}')">Lock</button>` : ""}
+            </div>
+          </div>`;
+        }).join("");
+      } catch (e) {
+        list.innerHTML = `<p class="muted" style="color:#dc2626;">${escapeHtml(e.message)}</p>`;
+      }
+    }
+
+    async function activateCompany(id, currentExpiry) {
+      const plan = document.getElementById("plan_" + id).value;
+      const base = Math.max(Date.now(), currentExpiry || 0);
+      const newExpiry = base + PLAN_DAYS[plan] * DAY;
+      if (!confirm(`Activate ${id} for ${plan}?\nNew expiry: ${new Date(newExpiry).toLocaleDateString("en-IN")}`)) return;
+      try {
+        await api(`saas_companies/${id}?updateMask.fieldPaths=status&updateMask.fieldPaths=expiryTime`, {
+          method: "PATCH",
+          body: JSON.stringify({ fields: { status: { stringValue: "active" }, expiryTime: { integerValue: String(newExpiry) } } })
+        });
+        showToast("✓ Activated");
+        loadCompanies();
+      } catch (e) { alert("Error: " + e.message); }
+    }
+
+    async function lockCompany(id) {
+      if (!confirm(`Lock ${id}? Their staff and admin will be blocked until you activate it again. No data is deleted.`)) return;
+      try {
+        await api(`saas_companies/${id}?updateMask.fieldPaths=status`, {
+          method: "PATCH",
+          body: JSON.stringify({ fields: { status: { stringValue: "locked" } } })
+        });
+        showToast("Company locked");
+        loadCompanies();
+      } catch (e) { alert("Error: " + e.message); }
+    }
+
+    // ---------- Settings (saas_config/master) ----------
+    async function loadConfig() {
+      try {
+        const doc = await api("saas_config/master");
+        const cfg = doc ? fromFsDoc(doc) : {};
+        document.getElementById("upiInput").value = cfg.upiId || "";
+        document.getElementById("scriptInput").value = cfg.masterEmailScript || "";
+      } catch (e) { /* shown when saving */ }
+    }
+
+    async function saveConfig() {
+      const upi = document.getElementById("upiInput").value.trim();
+      const script = document.getElementById("scriptInput").value.trim();
+      if (script && !/^https:\/\/script\.google\.com\/.+/.test(script)) return alert("The email script must be a Google Apps Script URL (https://script.google.com/...).");
+      try {
+        await api("saas_config/master?updateMask.fieldPaths=upiId&updateMask.fieldPaths=masterEmailScript", {
+          method: "PATCH",
+          body: JSON.stringify({ fields: { upiId: { stringValue: upi }, masterEmailScript: { stringValue: script } } })
+        });
+        showToast("✓ Settings saved");
+      } catch (e) { alert("Error: " + e.message); }
+    }
+
+    document.getElementById("passwordInput").addEventListener("keydown", e => { if (e.key === "Enter") login(); });
   </script>
 </body>
 </html>
